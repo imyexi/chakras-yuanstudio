@@ -27,7 +27,8 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar,
-  Legend
+  Legend,
+  LabelList
 } from 'recharts'
 import { Sparkles, ChevronLeft, ChevronRight, RotateCcw, Heart, Eye, Sun, Moon, Play, Share2, Check, Link } from 'lucide-react'
 
@@ -484,6 +485,13 @@ function ResultPage({
                       formatter={(value: number) => [`${value}%`, '能量值']}
                     />
                     <Bar dataKey="score" radius={[0, 4, 4, 0]}>
+                      <LabelList
+                        dataKey="score"
+                        position="insideRight"
+                        fill="white"
+                        fontSize={12}
+                        formatter={(value: number) => `${value > 0 ? '+' : ''}${value}%`}
+                      />
                       {chartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}

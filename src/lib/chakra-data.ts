@@ -262,11 +262,11 @@ export function calculateAllChakraScores(answers: Record<number, number>): Recor
 
 // 获取脉轮状态描述
 export function getChakraStatus(percentage: number): { status: string; interpretation: string } {
-  if (percentage <= -20) {
+  if (percentage <= 20) {
     return { status: "不活跃", interpretation: "inactive" };
-  } else if (percentage <= 50) {
+  } else if (percentage <= 70) {
     return { status: "开启", interpretation: "moderate" };
   } else {
-    return { status: "非常活跃", interpretation: "veryActive" };
+    return { status: "过分活跃", interpretation: "veryActive" };
   }
 }
