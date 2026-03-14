@@ -10,6 +10,7 @@ import {
   getChakraStatus,
   type Chakra
 } from '@/lib/chakra-data'
+import { getDeviceId } from '@/lib/device'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -948,12 +949,36 @@ export default function Home() {
     }
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const calculatedScores = calculateAllChakraScores(answers)
     setScores(calculatedScores)
+    
+    try {
+      const deviceId = getDeviceId()
+      const response = await fetch('/api/test-results', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          deviceId,
+          scores: calculatedScores,
+          answers
+        })
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        console.log('测试结果已保存')
+      } else {
+        console.error('保存失败:', data.error)
+      }
+    } catch (error) {
+      console.error('保存测试结果失败:', error)
+    }
+    
     setHasProgress(false)
     setPageState('result')
-    // 清除本地存储
     localStorage.removeItem('chakra-test-answers')
     localStorage.removeItem('chakra-test-current-question')
   }
