@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import qrCodeImage from '../../public/qrcode.png'
 import {
   questions,
   chakras,
@@ -35,6 +36,18 @@ import { Sparkles, ChevronLeft, ChevronRight, RotateCcw, Heart, Eye, Sun, Moon, 
 
 type PageState = 'welcome' | 'test' | 'result'
 
+type StoredResult = {
+  scores: Record<string, number>
+  answers: Record<number, number>
+  completedAt: string
+}
+
+const STORAGE_KEYS = {
+  answers: 'chakra-test-answers',
+  currentQuestion: 'chakra-test-current-question',
+  result: 'chakra-test-result'
+} as const
+
 // 欢迎页面组件
 function WelcomePage({ 
   onStart, 
@@ -59,7 +72,7 @@ function WelcomePage({
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={false}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
         className="relative z-10 max-w-3xl mx-auto text-center"
@@ -70,7 +83,7 @@ function WelcomePage({
             {chakras.map((chakra, index) => (
               <motion.div
                 key={chakra.id}
-                initial={{ scale: 0, opacity: 0 }}
+                initial={false}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: index * 0.1, duration: 0.5 }}
                 className="absolute w-12 h-12 rounded-full flex items-center justify-center"
@@ -86,7 +99,7 @@ function WelcomePage({
               </motion.div>
             ))}
             <motion.div
-              initial={{ scale: 0 }}
+              initial={false}
               animate={{ scale: 1 }}
               transition={{ delay: 0.8, duration: 0.5 }}
               className="absolute inset-0 flex items-center justify-center"
@@ -97,7 +110,7 @@ function WelcomePage({
         </div>
 
         <motion.h1
-          initial={{ opacity: 0 }}
+          initial={false}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
           className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-purple-300 via-pink-300 to-blue-300 bg-clip-text text-transparent"
@@ -106,7 +119,7 @@ function WelcomePage({
         </motion.h1>
 
         <motion.p
-          initial={{ opacity: 0 }}
+          initial={false}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7 }}
           className="text-lg md:text-xl text-purple-200/80 mb-8 leading-relaxed"
@@ -115,7 +128,7 @@ function WelcomePage({
         </motion.p>
 
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={false}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9 }}
           className="flex flex-wrap justify-center gap-3 mb-10 max-w-lg mx-auto"
@@ -136,7 +149,7 @@ function WelcomePage({
 
         {/* 根据是否有进度显示不同的按钮 */}
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={false}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.1 }}
           className="flex flex-col items-center gap-4"
@@ -250,7 +263,7 @@ function TestPage({
       <div className="flex-1 flex items-center justify-center p-4">
         <motion.div
           key={question.id}
-          initial={{ opacity: 0, x: 20 }}
+          initial={false}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           className="w-full max-w-2xl"
@@ -417,7 +430,7 @@ function ResultPage({
       {/* 头部 */}
       <div className="pt-8 pb-4 text-center">
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm mb-4"
         >
@@ -425,7 +438,7 @@ function ResultPage({
           <span className="text-sm text-purple-300">测试完成</span>
         </motion.div>
         <motion.h1
-          initial={{ opacity: 0, y: 20 }}
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           className="text-3xl md:text-4xl font-bold text-white mb-2"
@@ -433,7 +446,7 @@ function ResultPage({
           你的脉轮能量报告
         </motion.h1>
         <motion.p
-          initial={{ opacity: 0 }}
+          initial={false}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
           className="text-purple-300/60"
@@ -445,7 +458,7 @@ function ResultPage({
       <div className="max-w-6xl mx-auto px-4 pb-8">
         {/* 图表区域 */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           className="grid md:grid-cols-2 gap-6 mb-8"
@@ -550,7 +563,7 @@ function ResultPage({
 
         {/* 脉轮详情 */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
           className="mb-8"
@@ -567,7 +580,7 @@ function ResultPage({
               return (
                 <motion.div
                   key={chakra.id}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={false}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 + index * 0.1 }}
                   whileHover={{ scale: 1.02 }}
@@ -609,7 +622,7 @@ function ResultPage({
                           <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30 -translate-x-1/2" />
                           {/* 进度条 */}
                           <motion.div
-                            initial={{ width: 0 }}
+                            initial={false}
                             animate={{ width: `${Math.abs(score) / 2}%` }}
                             transition={{ delay: 0.8 + index * 0.1, duration: 0.8 }}
                             className="absolute h-full rounded-full"
@@ -654,7 +667,7 @@ function ResultPage({
 
         {/* 二维码区域 */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
           className="mb-8"
@@ -663,7 +676,7 @@ function ResultPage({
             <CardContent className="p-6 text-center">
               <div className="bg-white rounded-xl p-4 mb-4 inline-block">
                 <img 
-                  src="/qrcode.png" 
+                  src={qrCodeImage.src} 
                   alt="二维码" 
                   className="w-40 h-40 mx-auto"
                 />
@@ -677,7 +690,7 @@ function ResultPage({
 
         {/* 分享和重新测试按钮 */}
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={false}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
@@ -714,7 +727,7 @@ function ResultPage({
         {/* 分享提示 */}
         {copySuccess && (
           <motion.p
-            initial={{ opacity: 0, y: 10 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             className="text-center text-green-400 text-sm mt-2"
@@ -725,7 +738,7 @@ function ResultPage({
 
         {/* 页脚 */}
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={false}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2 }}
           className="text-center mt-8 pb-8"
@@ -738,14 +751,14 @@ function ResultPage({
       <AnimatePresence>
         {selectedChakra && (
           <motion.div
-            initial={{ opacity: 0 }}
+              initial={false}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
             onClick={() => setSelectedChakra(null)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={false}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={e => e.stopPropagation()}
@@ -854,8 +867,8 @@ function ResultPage({
 const loadSavedProgress = () => {
   if (typeof window === 'undefined') return { answers: {}, currentQuestion: 0 }
   try {
-    const savedAnswers = localStorage.getItem('chakra-test-answers')
-    const savedQuestion = localStorage.getItem('chakra-test-current-question')
+    const savedAnswers = localStorage.getItem(STORAGE_KEYS.answers)
+    const savedQuestion = localStorage.getItem(STORAGE_KEYS.currentQuestion)
     return {
       answers: savedAnswers ? JSON.parse(savedAnswers) : {},
       currentQuestion: savedQuestion ? parseInt(savedQuestion, 10) : 0
@@ -869,7 +882,7 @@ const loadSavedProgress = () => {
 const checkSavedProgress = () => {
   if (typeof window === 'undefined') return { hasProgress: false, progressInfo: { answered: 0, total: 56, percentage: 0 } }
   try {
-    const savedAnswers = localStorage.getItem('chakra-test-answers')
+    const savedAnswers = localStorage.getItem(STORAGE_KEYS.answers)
     if (savedAnswers) {
       const answers = JSON.parse(savedAnswers)
       const answered = Object.keys(answers).length
@@ -888,30 +901,79 @@ const checkSavedProgress = () => {
   return { hasProgress: false, progressInfo: { answered: 0, total: 56, percentage: 0 } }
 }
 
+const loadSavedResult = (): StoredResult | null => {
+  if (typeof window === 'undefined') return null
+  try {
+    const savedResult = localStorage.getItem(STORAGE_KEYS.result)
+    if (!savedResult) return null
+
+    const parsedResult = JSON.parse(savedResult) as Partial<StoredResult>
+    if (!parsedResult.scores || typeof parsedResult.scores !== 'object') {
+      return null
+    }
+
+    return {
+      scores: parsedResult.scores,
+      answers: parsedResult.answers && typeof parsedResult.answers === 'object' ? parsedResult.answers : {},
+      completedAt: typeof parsedResult.completedAt === 'string' ? parsedResult.completedAt : new Date().toISOString()
+    }
+  } catch {
+    return null
+  }
+}
+
+const clearSavedProgress = () => {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(STORAGE_KEYS.answers)
+  localStorage.removeItem(STORAGE_KEYS.currentQuestion)
+}
+
+const clearSavedResult = () => {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(STORAGE_KEYS.result)
+}
+
 // 主页面组件
 export default function Home() {
+  const initialProgress = loadSavedProgress()
+  const savedProgressState = checkSavedProgress()
+  const initialSavedResult = savedProgressState.hasProgress ? null : loadSavedResult()
+
   const [pageState, setPageState] = useState<PageState>('welcome')
-  const [currentQuestion, setCurrentQuestion] = useState(() => loadSavedProgress().currentQuestion)
-  const [answers, setAnswers] = useState<Record<number, number>>(() => loadSavedProgress().answers)
-  const [scores, setScores] = useState<Record<string, number>>({})
-  const [hasProgress, setHasProgress] = useState(() => checkSavedProgress().hasProgress)
-  const [progressInfo, setProgressInfo] = useState(() => checkSavedProgress().progressInfo)
+  const [currentQuestion, setCurrentQuestion] = useState(initialProgress.currentQuestion)
+  const [answers, setAnswers] = useState<Record<number, number>>(initialProgress.answers)
+  const [scores, setScores] = useState<Record<string, number>>(initialSavedResult?.scores || {})
+  const [hasProgress, setHasProgress] = useState(savedProgressState.hasProgress)
+  const [progressInfo, setProgressInfo] = useState(savedProgressState.progressInfo)
+
+  useEffect(() => {
+    if (hasProgress) {
+      setPageState('welcome')
+      return
+    }
+
+    if (initialSavedResult) {
+      setPageState('result')
+    }
+  }, [hasProgress, initialSavedResult])
 
   // 保存进度到本地存储
   useEffect(() => {
     if (pageState === 'test') {
-      localStorage.setItem('chakra-test-answers', JSON.stringify(answers))
-      localStorage.setItem('chakra-test-current-question', currentQuestion.toString())
+      localStorage.setItem(STORAGE_KEYS.answers, JSON.stringify(answers))
+      localStorage.setItem(STORAGE_KEYS.currentQuestion, currentQuestion.toString())
     }
   }, [answers, currentQuestion, pageState])
 
   const handleStart = () => {
     // 开始新测试，清除之前的进度
+    clearSavedResult()
     setAnswers({})
     setCurrentQuestion(0)
+    setScores({})
     setHasProgress(false)
-    localStorage.removeItem('chakra-test-answers')
-    localStorage.removeItem('chakra-test-current-question')
+    setProgressInfo({ answered: 0, total: 56, percentage: 0 })
+    clearSavedProgress()
     setPageState('test')
   }
 
@@ -922,12 +984,13 @@ export default function Home() {
 
   const handleRestart = () => {
     // 重新开始，清除所有数据
+    clearSavedResult()
     setAnswers({})
     setCurrentQuestion(0)
+    setScores({})
     setHasProgress(false)
     setProgressInfo({ answered: 0, total: 56, percentage: 0 })
-    localStorage.removeItem('chakra-test-answers')
-    localStorage.removeItem('chakra-test-current-question')
+    clearSavedProgress()
   }
 
   const handleSelectAnswer = (questionId: number, answerIndex: number) => {
@@ -952,6 +1015,14 @@ export default function Home() {
   const handleSubmit = async () => {
     const calculatedScores = calculateAllChakraScores(answers)
     setScores(calculatedScores)
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.result, JSON.stringify({
+        scores: calculatedScores,
+        answers,
+        completedAt: new Date().toISOString()
+      }))
+    }
     
     try {
       const deviceId = getDeviceId()
@@ -979,15 +1050,19 @@ export default function Home() {
     
     setHasProgress(false)
     setPageState('result')
-    localStorage.removeItem('chakra-test-answers')
-    localStorage.removeItem('chakra-test-current-question')
+    setProgressInfo({ answered: 0, total: 56, percentage: 0 })
+    clearSavedProgress()
   }
 
   const handleResultRestart = () => {
+    clearSavedResult()
+    clearSavedProgress()
     setAnswers({})
     setCurrentQuestion(0)
     setScores({})
     setPageState('welcome')
+    setHasProgress(false)
+    setProgressInfo({ answered: 0, total: 56, percentage: 0 })
   }
 
   return (
@@ -996,7 +1071,7 @@ export default function Home() {
         {pageState === 'welcome' && (
           <motion.div
             key="welcome"
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
@@ -1013,7 +1088,7 @@ export default function Home() {
         {pageState === 'test' && (
           <motion.div
             key="test"
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
@@ -1031,7 +1106,7 @@ export default function Home() {
         {pageState === 'result' && (
           <motion.div
             key="result"
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
