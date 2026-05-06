@@ -8,10 +8,15 @@ import {
   chakras,
   optionLabels,
   calculateAllChakraScores,
-  getChakraStatus,
   type Chakra
 } from '@/lib/chakra-data'
+import {
+  formatArchetypePeople,
+  generateChakraArchetypeResult,
+  normalizeChakraScore
+} from '@/lib/chakra-archetypes'
 import { getDeviceId } from '@/lib/device'
+import { ChakraArchetypeAvatar, type ArchetypeAvatarGender } from '@/components/chakra-archetype-avatar'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,17 +29,21 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  Legend,
+  ReferenceLine,
   LabelList
 } from 'recharts'
-import { Sparkles, ChevronLeft, ChevronRight, RotateCcw, Heart, Eye, Sun, Moon, Play, Share2, Check, Link } from 'lucide-react'
+import { Sparkles, ChevronLeft, ChevronRight, RotateCcw, Sun, Play, Share2, Check, Users, Compass, Target, Shield, Quote, TrendingUp, Layers, Venus, Mars } from 'lucide-react'
 
 type PageState = 'welcome' | 'test' | 'result'
+
+const archetypeGenderOptions: Array<{
+  value: ArchetypeAvatarGender
+  label: string
+  Icon: typeof Venus
+}> = [
+  { value: 'female', label: '女性', Icon: Venus },
+  { value: 'male', label: '男性', Icon: Mars }
+]
 
 type StoredResult = {
   scores: Record<string, number>
@@ -47,6 +56,38 @@ const STORAGE_KEYS = {
   currentQuestion: 'chakra-test-current-question',
   result: 'chakra-test-result'
 } as const
+
+function ArchetypeGenderToggle({
+  value,
+  onChange
+}: {
+  value: ArchetypeAvatarGender
+  onChange: (value: ArchetypeAvatarGender) => void
+}) {
+  return (
+    <div className="inline-flex rounded-lg border border-white/10 bg-black/15 p-1">
+      {archetypeGenderOptions.map(({ value: optionValue, label, Icon }) => {
+        const isActive = value === optionValue
+
+        return (
+          <button
+            key={optionValue}
+            type="button"
+            onClick={() => onChange(optionValue)}
+            className={[
+              'inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors',
+              isActive ? 'bg-white text-slate-950 shadow-sm' : 'text-white/60 hover:bg-white/10 hover:text-white'
+            ].join(' ')}
+            aria-pressed={isActive}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 // 欢迎页面组件
 function WelcomePage({ 
@@ -380,13 +421,25 @@ function ResultPage({
   scores: Record<string, number>
   onRestart: () => void
 }) {
-  const [selectedChakra, setSelectedChakra] = useState<Chakra | null>(null)
   const [copySuccess, setCopySuccess] = useState(false)
+  const [avatarGender, setAvatarGender] = useState<ArchetypeAvatarGender>('female')
+  const archetypeResult = generateChakraArchetypeResult(scores)
+  const roleByChakraName: Record<string, string> = {
+    [archetypeResult.primary.name]: '主导能量',
+    [archetypeResult.secondary.name]: '辅助风格',
+    [archetypeResult.lowest.name]: '成长课题'
+  }
 
   // 生成分享文本
   const getShareText = () => {
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-    return `我刚测完我的脉轮，转你也试试，${baseUrl}`
+    const shareUrl = 'http://yyry.studio/chakras'
+    return `我的脉轮人物原型：${archetypeResult.archetype.name}
+
+${archetypeResult.archetype.headline}
+
+代表人物参考：${formatArchetypePeople(archetypeResult.archetype.celebrities)}
+
+。 ${shareUrl}`
   }
 
   // 复制分享文本
@@ -410,20 +463,74 @@ function ResultPage({
   }
 
   // 准备图表数据
-  const chartData = chakras.map(chakra => ({
-    name: chakra.name,
-    score: scores[chakra.name] || 0,
-    color: chakra.color,
-    fullName: chakra.name
-  }))
+  const chartData = chakras.map(chakra => {
+    const rawScore = scores[chakra.name] || 0
+    return {
+      name: chakra.name,
+      score: rawScore,
+      normalizedScore: normalizeChakraScore(rawScore),
+      rawScore,
+      role: roleByChakraName[chakra.name],
+      color: chakra.color,
+      fullName: chakra.name
+    }
+  })
 
-  // 雷达图数据
-  const radarData = chakras.map(chakra => ({
-    subject: chakra.name,
-    value: scores[chakra.name] || 0,
-    fullMark: 100,
-    minMark: -100
-  }))
+  const formatSignedScore = (score: number) => `${score > 0 ? '+' : ''}${Math.round(score)}%`
+  const rawAverageScore = Math.round(chakras.reduce((sum, chakra) => sum + (scores[chakra.name] || 0), 0) / chakras.length)
+  const energyBarChart = (
+    <div className="mb-5 rounded-xl border border-white/10 bg-black/10 p-3 sm:p-4">
+      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+        <Sun className="h-4 w-4 text-yellow-300" />
+        七大脉轮能量柱状图
+      </div>
+      <div className="h-60 sm:h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} layout="vertical">
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+            <XAxis
+              type="number"
+              domain={[-100, 100]}
+              tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 12 }}
+              axisLine={{ stroke: 'rgba(255,255,255,0.2)' }}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              tick={{ fill: 'rgba(255,255,255,0.8)', fontSize: 12 }}
+              axisLine={{ stroke: 'rgba(255,255,255,0.2)' }}
+              width={70}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '8px',
+                color: 'white'
+              }}
+              formatter={(value: number, name: string, props: any) => [
+                `${formatSignedScore(value)}（能量尺 ${props.payload.normalizedScore}/100）`,
+                props.payload.role || '能量倾向'
+              ]}
+            />
+            <ReferenceLine x={0} stroke="rgba(255,255,255,0.35)" strokeWidth={1} />
+            <Bar dataKey="score" radius={[4, 4, 4, 4]}>
+              <LabelList
+                dataKey="score"
+                position="insideRight"
+                fill="white"
+                fontSize={12}
+                formatter={(value: number) => formatSignedScore(value)}
+              />
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -443,7 +550,7 @@ function ResultPage({
           transition={{ delay: 0.2 }}
           className="text-3xl md:text-4xl font-bold text-white mb-2"
         >
-          你的脉轮能量报告
+          你的脉轮人物原型报告
         </motion.h1>
         <motion.p
           initial={false}
@@ -451,218 +558,182 @@ function ResultPage({
           transition={{ delay: 0.4 }}
           className="text-purple-300/60"
         >
-          以下是你七大脉轮的能量状态分析
+          以下是你当前能量模式、成长课题与七大脉轮状态
         </motion.p>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 pb-8">
-        {/* 图表区域 */}
+        {/* 人物原型结果 */}
         <motion.div
           initial={false}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="grid md:grid-cols-2 gap-6 mb-8"
+          transition={{ delay: 0.25 }}
+          className="mb-8"
         >
-          {/* 条形图 */}
-          <Card className="bg-white/5 backdrop-blur-sm border-white/10">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Sun className="h-5 w-5 text-yellow-400" />
-                能量柱状图
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                    <XAxis
-                      type="number"
-                      domain={[-100, 100]}
-                      tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 12 }}
-                      axisLine={{ stroke: 'rgba(255,255,255,0.2)' }}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      tick={{ fill: 'rgba(255,255,255,0.8)', fontSize: 12 }}
-                      axisLine={{ stroke: 'rgba(255,255,255,0.2)' }}
-                      width={70}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '8px',
-                        color: 'white'
-                      }}
-                      formatter={(value: number) => [`${value}%`, '能量值']}
-                    />
-                    <Bar dataKey="score" radius={[0, 4, 4, 0]}>
-                      <LabelList
-                        dataKey="score"
-                        position="insideRight"
-                        fill="white"
-                        fontSize={12}
-                        formatter={(value: number) => `${value > 0 ? '+' : ''}${value}%`}
-                      />
-                      {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+          <Card className="overflow-hidden border-white/10 bg-white/[0.06] backdrop-blur-sm">
+            <CardContent className="p-0">
+              <div>
+                <section className="p-5 md:p-6 xl:p-8">
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-emerald-300/20 bg-emerald-400/15 px-3 py-1 text-xs text-emerald-200">
+                      {archetypeResult.archetype.family}
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-white/70">
+                      {archetypeResult.archetype.code}
+                    </span>
+                    <span className="rounded-full border border-amber-300/20 bg-amber-400/15 px-3 py-1 text-xs text-amber-200">
+                      {archetypeResult.activityType.name} · {archetypeResult.balanceType.name}
+                    </span>
+                  </div>
 
-          {/* 雷达图 */}
-          <Card className="bg-white/5 backdrop-blur-sm border-white/10">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Eye className="h-5 w-5 text-purple-400" />
-                能量雷达图
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={radarData}>
-                    <PolarGrid stroke="rgba(255,255,255,0.1)" />
-                    <PolarAngleAxis
-                      dataKey="subject"
-                      tick={{ fill: 'rgba(255,255,255,0.8)', fontSize: 11 }}
+                  <p className="mb-1.5 text-sm text-white/60">你的脉轮人物原型</p>
+                  <h2 className="mb-3 text-4xl font-bold text-white md:text-5xl xl:text-6xl">
+                    {archetypeResult.archetype.name}
+                  </h2>
+                  <div className="mb-5 flex items-start gap-3">
+                    <Quote className="mt-1 h-5 w-5 shrink-0 text-amber-300" />
+                    <p className="text-lg leading-relaxed text-white/90 md:text-xl xl:text-2xl">
+                      {archetypeResult.archetype.headline}
+                    </p>
+                  </div>
+
+                  <div className="mb-5 rounded-2xl border border-white/10 bg-gradient-to-br from-violet-300/10 via-white/5 to-amber-300/10 p-3 shadow-inner shadow-white/5 sm:p-4">
+                    <div className="mb-3 flex justify-center">
+                      <ArchetypeGenderToggle value={avatarGender} onChange={setAvatarGender} />
+                    </div>
+                    <ChakraArchetypeAvatar
+                      name={archetypeResult.archetype.name}
+                      code={archetypeResult.archetype.code}
+                      primaryKey={archetypeResult.primary.key}
+                      secondaryKey={archetypeResult.secondary.key}
+                      gender={avatarGender}
+                      variant="hero"
+                      active
+                      showCaption={false}
+                      className="mx-auto max-w-[260px]"
                     />
-                    <PolarRadiusAxis
-                      angle={30}
-                      domain={[-100, 100]}
-                      tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
-                    />
-                    <Radar
-                      name="能量值"
-                      dataKey="value"
-                      stroke="url(#colorGradient)"
-                      fill="url(#colorGradient)"
-                      fillOpacity={0.5}
-                    />
-                    <defs>
-                      <linearGradient id="colorGradient" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#9333EA" />
-                        <stop offset="100%" stopColor="#3B82F6" />
-                      </linearGradient>
-                    </defs>
-                    <Legend
-                      wrapperStyle={{ color: 'white' }}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
+                  </div>
+
+                  {energyBarChart}
+
+                  <div className="grid grid-cols-2 gap-2 text-xs sm:gap-3 sm:text-sm">
+                    <div className="rounded-lg border border-white/10 bg-black/10 p-2.5 sm:p-3">
+                      <div className="mb-1 flex items-center gap-1.5 text-white/50">
+                        <TrendingUp className="h-3.5 w-3.5 shrink-0 text-emerald-300 sm:h-4 sm:w-4" />
+                        主导能量
+                      </div>
+                      <p className="font-medium leading-tight text-white">{archetypeResult.primary.name}</p>
+                      <p className="mt-0.5 leading-tight text-white/50">{formatSignedScore(archetypeResult.primary.score)}</p>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-black/10 p-2.5 sm:p-3">
+                      <div className="mb-1 flex items-center gap-1.5 text-white/50">
+                        <Layers className="h-3.5 w-3.5 shrink-0 text-sky-300 sm:h-4 sm:w-4" />
+                        辅助风格
+                      </div>
+                      <p className="font-medium leading-tight text-white">{archetypeResult.secondary.name}</p>
+                      <p className="mt-0.5 leading-tight text-white/50">{formatSignedScore(archetypeResult.secondary.score)}</p>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-black/10 p-2.5 sm:p-3">
+                      <div className="mb-1 flex items-center gap-1.5 text-white/50">
+                        <Target className="h-3.5 w-3.5 shrink-0 text-rose-300 sm:h-4 sm:w-4" />
+                        成长课题
+                      </div>
+                      <p className="font-medium leading-tight text-white">{archetypeResult.growthTheme.name}</p>
+                      <p className="mt-0.5 leading-tight text-white/50">{formatSignedScore(archetypeResult.lowest.score)}</p>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-black/10 p-2.5 sm:p-3">
+                      <div className="mb-1 flex items-center gap-1.5 text-white/50">
+                        <Compass className="h-3.5 w-3.5 shrink-0 text-violet-300 sm:h-4 sm:w-4" />
+                        能量结构
+                      </div>
+                      <p className="font-medium leading-tight text-white">{archetypeResult.energyStructure.name}</p>
+                      <p className="mt-0.5 leading-tight text-white/50">平均 {formatSignedScore(rawAverageScore)}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-lg border border-emerald-300/15 bg-gradient-to-br from-emerald-500/10 via-white/5 to-violet-500/10 p-3.5 md:p-4">
+                    <div>
+                      <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-white">
+                        <Users className="h-4 w-4 text-emerald-300" />
+                        代表人物参考
+                      </div>
+                      <p className="text-xs leading-relaxed text-white/45">
+                        代表人物仅用于帮助理解该类型的公众气质，不代表对本人真实性格、经历、成就或心理状态的判断。
+                      </p>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {archetypeResult.archetype.celebrities.map((person) => (
+                        <span
+                          key={`${person.name}-${person.enName || ''}`}
+                          className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-white"
+                        >
+                          {person.enName ? `${person.name} ${person.enName}` : person.name}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-3 flex flex-col gap-2 border-t border-white/10 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                      {copySuccess ? (
+                        <p className="text-sm text-green-300">已复制，可粘贴分享给微信好友</p>
+                      ) : (
+                        <p className="text-xs text-white/40">把你的原型结果发给好友一起看看</p>
+                      )}
+                      <Button
+                        onClick={handleCopyLink}
+                        size="sm"
+                        className="bg-gradient-to-r from-green-600 to-teal-600 text-white hover:from-green-700 hover:to-teal-700"
+                      >
+                        {copySuccess ? (
+                          <>
+                            <Check className="mr-2 h-4 w-4" />
+                            已复制
+                          </>
+                        ) : (
+                          <>
+                            <Share2 className="mr-2 h-4 w-4" />
+                            分享给好友
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </section>
+
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* 脉轮详情 */}
+        {/* 深度分析 */}
         <motion.div
           initial={false}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.3 }}
           className="mb-8"
         >
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Heart className="h-5 w-5 text-pink-400" />
-            脉轮详情解读
-          </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {chakras.map((chakra, index) => {
-              const score = scores[chakra.name] || 0
-              const { status, interpretation } = getChakraStatus(score)
-
-              return (
-                <motion.div
-                  key={chakra.id}
-                  initial={false}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6 + index * 0.1 }}
-                  whileHover={{ scale: 1.02 }}
-                  onClick={() => setSelectedChakra(chakra)}
-                  className="cursor-pointer"
-                >
-                  <Card
-                    className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-white/20 transition-all duration-300 overflow-hidden"
-                    style={{ borderTopColor: chakra.color, borderTopWidth: '3px' }}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: chakra.color }}
-                          >
-                            <span className="text-white text-xs font-bold">{chakra.id}</span>
-                          </div>
-                          <div>
-                            <h3 className="font-medium text-white">{chakra.name}</h3>
-                            <p className="text-xs text-white/50">{chakra.englishName}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mb-3">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="text-white/60">能量值</span>
-                          <span
-                            className="font-medium"
-                            style={{ color: chakra.color }}
-                          >
-                            {score > 0 ? '+' : ''}{score}%
-                          </span>
-                        </div>
-                        <div className="relative h-2 bg-white/10 rounded-full overflow-hidden">
-                          {/* 中间线 */}
-                          <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30 -translate-x-1/2" />
-                          {/* 进度条 */}
-                          <motion.div
-                            initial={false}
-                            animate={{ width: `${Math.abs(score) / 2}%` }}
-                            transition={{ delay: 0.8 + index * 0.1, duration: 0.8 }}
-                            className="absolute h-full rounded-full"
-                            style={{ 
-                              backgroundColor: chakra.color,
-                              left: score >= 0 ? '50%' : 'auto',
-                              right: score < 0 ? '50%' : 'auto'
-                            }}
-                          />
-                        </div>
-                        <div className="flex justify-between text-xs text-white/40 mt-1">
-                          <span>-100%</span>
-                          <span>0</span>
-                          <span>+100%</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-center">
-                        {index < 3 ? (
-                          <span
-                            className="text-xs px-2 py-1 rounded-full"
-                            style={{
-                              backgroundColor: `${chakra.color}20`,
-                              color: chakra.color
-                            }}
-                          >
-                            {status}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-white/50">
-                            联系圆圆获取解读
-                          </span>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )
-            })}
-          </div>
+          <Card className="bg-white/5 backdrop-blur-sm border-white/10">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Shield className="h-5 w-5 text-amber-300" />
+                深度分析
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-white/65 leading-relaxed">{archetypeResult.summary}</p>
+              <div className="relative mt-5 overflow-hidden rounded-xl border border-white/10 bg-black/10 px-4 pb-4 pt-3">
+                <div className="space-y-2 opacity-45">
+                  <div className="h-3 w-11/12 rounded-full bg-white/15" />
+                  <div className="h-3 w-4/5 rounded-full bg-white/10" />
+                  <div className="h-3 w-2/3 rounded-full bg-white/10" />
+                </div>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-slate-900/95 via-purple-950/70 to-transparent" />
+                <div className="relative mt-4 flex items-center justify-center border-t border-white/10 pt-3">
+                  <p className="rounded-full border border-amber-300/20 bg-amber-300/10 px-4 py-1.5 text-xs font-medium text-amber-100">
+                    更多分析请咨询圆圆
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </motion.div>
 
         {/* 二维码区域 */}
@@ -688,31 +759,13 @@ function ResultPage({
           </Card>
         </motion.div>
 
-        {/* 分享和重新测试按钮 */}
+        {/* 重新测试按钮 */}
         <motion.div
           initial={false}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          className="flex items-center justify-center"
         >
-          {/* 分享按钮 */}
-          <Button
-            onClick={handleCopyLink}
-            className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white px-8"
-          >
-            {copySuccess ? (
-              <>
-                <Check className="mr-2 h-4 w-4" />
-                已复制链接
-              </>
-            ) : (
-              <>
-                <Share2 className="mr-2 h-4 w-4" />
-                分享给好友
-              </>
-            )}
-          </Button>
-          
           {/* 重新测试按钮 */}
           <Button
             onClick={onRestart}
@@ -724,141 +777,20 @@ function ResultPage({
           </Button>
         </motion.div>
 
-        {/* 分享提示 */}
-        {copySuccess && (
-          <motion.p
-            initial={false}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="text-center text-green-400 text-sm mt-2"
-          >
-            已复制，可粘贴分享给微信好友
-          </motion.p>
-        )}
-
         {/* 页脚 */}
         <motion.div
           initial={false}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2 }}
-          className="text-center mt-8 pb-8"
+          className="text-center mt-8 pb-8 max-w-3xl mx-auto"
         >
+          <p className="text-white/35 text-xs leading-relaxed mb-3">
+            本测试结果仅用于自我探索、情绪觉察和个人成长参考，不构成医学、心理诊断或治疗建议。如你正经历持续的心理痛苦或身体不适，请寻求专业人士支持。
+          </p>
           <p className="text-white/40 text-sm">@圆圆如意</p>
         </motion.div>
       </div>
 
-      {/* 详情弹窗 */}
-      <AnimatePresence>
-        {selectedChakra && (
-          <motion.div
-              initial={false}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-            onClick={() => setSelectedChakra(null)}
-          >
-            <motion.div
-              initial={false}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={e => e.stopPropagation()}
-              className="w-full max-w-lg"
-            >
-              <Card
-                className="bg-slate-900/95 border-white/20 overflow-hidden"
-                style={{ borderTopColor: selectedChakra.color, borderTopWidth: '4px' }}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: selectedChakra.color }}
-                    >
-                      <span className="text-white text-lg font-bold">{selectedChakra.id}</span>
-                    </div>
-                    <div>
-                      <CardTitle className="text-white">{selectedChakra.name}</CardTitle>
-                      <p className="text-sm text-white/50">{selectedChakra.englishName}</p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-white/70 mb-4">{selectedChakra.description}</p>
-
-                  <div className="mb-4">
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-white/60">能量值</span>
-                      <span
-                        className="font-bold text-lg"
-                        style={{ color: selectedChakra.color }}
-                      >
-                        {scores[selectedChakra.name] > 0 ? '+' : ''}{scores[selectedChakra.name]}%
-                      </span>
-                    </div>
-                    <div className="relative h-3 bg-white/10 rounded-full overflow-hidden">
-                      {/* 中间线 */}
-                      <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30" />
-                      {/* 进度条 */}
-                      <div
-                        className="absolute h-full rounded-full"
-                        style={{
-                          width: `${Math.abs(scores[selectedChakra.name]) / 2}%`,
-                          left: scores[selectedChakra.name] >= 0 ? '50%' : `${50 - Math.abs(scores[selectedChakra.name]) / 2}%`,
-                          backgroundColor: selectedChakra.color
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-xs text-white/40 mt-1">
-                      <span>-100%</span>
-                      <span>0</span>
-                      <span>+100%</span>
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <h4 className="text-sm font-medium text-white/80 mb-2">代表意义</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedChakra.meanings.map((meaning, idx) => (
-                        <span
-                          key={idx}
-                          className="text-xs px-2 py-1 rounded-full bg-white/10 text-white/70"
-                        >
-                          {meaning}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {selectedChakra.id <= 3 ? (
-                    <div>
-                      <h4 className="text-sm font-medium text-white/80 mb-2">状态解读</h4>
-                      <p className="text-sm text-white/60 leading-relaxed">
-                        {selectedChakra.interpretations[getChakraStatus(scores[selectedChakra.name]).interpretation as keyof typeof selectedChakra.interpretations]}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-center py-4 bg-white/5 rounded-lg">
-                      <p className="text-white/60 text-sm mb-2">
-                        想了解{selectedChakra.name}的详细解读？
-                      </p>
-                      <p className="text-purple-300 text-sm">
-                        扫描下方二维码联系圆圆获取专属分析
-                      </p>
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={() => setSelectedChakra(null)}
-                    className="w-full mt-6 bg-white/10 hover:bg-white/20 text-white"
-                  >
-                    关闭
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
@@ -938,24 +870,14 @@ export default function Home() {
   const initialProgress = loadSavedProgress()
   const savedProgressState = checkSavedProgress()
   const initialSavedResult = savedProgressState.hasProgress ? null : loadSavedResult()
+  const initialPageState: PageState = initialSavedResult ? 'result' : 'welcome'
 
-  const [pageState, setPageState] = useState<PageState>('welcome')
+  const [pageState, setPageState] = useState<PageState>(initialPageState)
   const [currentQuestion, setCurrentQuestion] = useState(initialProgress.currentQuestion)
   const [answers, setAnswers] = useState<Record<number, number>>(initialProgress.answers)
   const [scores, setScores] = useState<Record<string, number>>(initialSavedResult?.scores || {})
   const [hasProgress, setHasProgress] = useState(savedProgressState.hasProgress)
   const [progressInfo, setProgressInfo] = useState(savedProgressState.progressInfo)
-
-  useEffect(() => {
-    if (hasProgress) {
-      setPageState('welcome')
-      return
-    }
-
-    if (initialSavedResult) {
-      setPageState('result')
-    }
-  }, [hasProgress, initialSavedResult])
 
   // 保存进度到本地存储
   useEffect(() => {

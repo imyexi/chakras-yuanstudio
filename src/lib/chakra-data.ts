@@ -262,11 +262,17 @@ export function calculateAllChakraScores(answers: Record<number, number>): Recor
 
 // 获取脉轮状态描述
 export function getChakraStatus(percentage: number): { status: string; interpretation: string } {
-  if (percentage <= 20) {
-    return { status: "不活跃", interpretation: "inactive" };
-  } else if (percentage <= 70) {
-    return { status: "开启", interpretation: "moderate" };
+  const normalizedScore = Math.round((Math.max(-100, Math.min(100, percentage)) + 100) / 2);
+
+  if (normalizedScore < 40) {
+    return { status: "低活跃", interpretation: "inactive" };
+  } else if (normalizedScore < 60) {
+    return { status: "中低活跃", interpretation: "moderate" };
+  } else if (normalizedScore < 75) {
+    return { status: "正常活跃", interpretation: "active" };
+  } else if (normalizedScore < 90) {
+    return { status: "高活跃", interpretation: "active" };
   } else {
-    return { status: "过分活跃", interpretation: "veryActive" };
+    return { status: "过度活跃", interpretation: "veryActive" };
   }
 }
