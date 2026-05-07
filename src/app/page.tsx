@@ -59,6 +59,15 @@ const STORAGE_KEYS = {
 
 const API_BASE_PATH = '/chakras'
 
+const RARE_ARCHETYPE_CODES = new Set([
+  'Crown-ThirdEye',
+  'Crown-Throat',
+  'ThirdEye-Crown',
+  'ThirdEye-Throat',
+  'Crown-Heart',
+  'ThirdEye-Heart'
+])
+
 function ArchetypeGenderToggle({
   value,
   onChange
@@ -426,6 +435,7 @@ function ResultPage({
   const [copySuccess, setCopySuccess] = useState(false)
   const [avatarGender, setAvatarGender] = useState<ArchetypeAvatarGender>('female')
   const archetypeResult = generateChakraArchetypeResult(scores)
+  const isRareArchetype = RARE_ARCHETYPE_CODES.has(archetypeResult.archetype.code)
   const roleByChakraName: Record<string, string> = {
     [archetypeResult.primary.name]: '主导能量',
     [archetypeResult.secondary.name]: '辅助风格',
@@ -720,6 +730,16 @@ ${archetypeResult.archetype.headline}
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {isRareArchetype && (
+                <div className="mb-4 rounded-xl border border-amber-300/25 bg-gradient-to-br from-amber-300/15 via-white/5 to-violet-400/10 p-4">
+                  <p className="text-sm font-semibold text-amber-100">
+                    恭喜你命中小概率人格：{archetypeResult.archetype.name}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-white/60">
+                    这类原型通常需要高层次洞察、精神追问、表达或共情能量同时突出，因此在人群中更少见。你可以把它看作一份值得认真理解的内在天赋。
+                  </p>
+                </div>
+              )}
               <p className="text-sm text-white/65 leading-relaxed">{archetypeResult.summary}</p>
               <div className="relative mt-5 overflow-hidden rounded-xl border border-white/10 bg-black/10 px-4 pb-4 pt-3">
                 <div className="space-y-2 opacity-45">
