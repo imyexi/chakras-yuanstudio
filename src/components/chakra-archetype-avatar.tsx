@@ -37,7 +37,8 @@ function slugifyArchetypeCode(code: string) {
 }
 
 function getArchetypeImageSrc(code: string, gender: ArchetypeAvatarGender) {
-  return `${publicAssetBasePath}/archetypes/${gender}/${slugifyArchetypeCode(code)}.webp`
+  const extension = gender === 'female' ? 'png' : 'webp'
+  return `${publicAssetBasePath}/archetypes/${gender}/${slugifyArchetypeCode(code)}.${extension}`
 }
 
 function ImagePlaceholder({
