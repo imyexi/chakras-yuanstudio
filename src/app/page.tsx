@@ -57,6 +57,8 @@ const STORAGE_KEYS = {
   result: 'chakra-test-result'
 } as const
 
+const API_BASE_PATH = '/chakras'
+
 function ArchetypeGenderToggle({
   value,
   onChange
@@ -948,7 +950,7 @@ export default function Home() {
     
     try {
       const deviceId = getDeviceId()
-      const response = await fetch('/api/test-results', {
+      const response = await fetch(`${API_BASE_PATH}/api/test-results`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
