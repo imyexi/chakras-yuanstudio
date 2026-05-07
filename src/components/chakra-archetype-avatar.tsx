@@ -81,12 +81,26 @@ export function ChakraArchetypeAvatar({
   const imageSrc = useMemo(() => getArchetypeImageSrc(code, gender), [code, gender])
   const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null)
   const imageFailed = failedImageSrc === imageSrc
+  const imageFrameClass = isCompact
+    ? 'mx-auto aspect-square w-full max-w-[132px]'
+    : isHero
+      ? gender === 'female'
+        ? 'mx-auto aspect-[7/5] w-full max-w-[520px]'
+        : 'mx-auto aspect-square w-full max-w-[280px]'
+      : 'mx-auto aspect-square w-full max-w-[240px]'
+  const imageSizes = isCompact
+    ? '(max-width: 768px) 44vw, 132px'
+    : isHero
+      ? gender === 'female'
+        ? '(max-width: 768px) 78vw, 520px'
+        : '(max-width: 768px) 70vw, 280px'
+      : '(max-width: 768px) 80vw, 240px'
 
   return (
     <div
       className={[
         'relative text-center transition-all duration-300',
-        isHero ? 'rounded-2xl border border-white/15 bg-gradient-to-br from-white/15 via-violet-300/10 to-black/10 p-3 shadow-xl shadow-black/10' : 'overflow-hidden rounded-lg border',
+        isHero ? '' : 'overflow-hidden rounded-lg border',
         !isHero && active ? 'border-amber-300/80 bg-amber-300/10 shadow-lg shadow-amber-500/10' : '',
         !isHero && !active ? 'border-white/10 bg-white/[0.06]' : '',
         isCompact ? 'px-2 py-3 hover:-translate-y-1 hover:border-white/30' : '',
@@ -101,7 +115,7 @@ export function ChakraArchetypeAvatar({
         </span>
       )}
 
-      <div className={isCompact ? 'mx-auto aspect-square w-full max-w-[132px]' : isHero ? 'mx-auto aspect-square w-full max-w-[230px] xl:max-w-[250px]' : 'mx-auto aspect-square w-full max-w-[240px]'}>
+      <div className={imageFrameClass}>
         <div
           className={[
             'relative h-full w-full overflow-hidden',
@@ -117,7 +131,7 @@ export function ChakraArchetypeAvatar({
               src={imageSrc}
               alt={`${gender === 'female' ? '女性' : '男性'}${name}人物原型`}
               fill
-              sizes={isCompact ? '(max-width: 768px) 44vw, 132px' : '(max-width: 768px) 80vw, 240px'}
+              sizes={imageSizes}
               className={isHero ? 'object-contain mix-blend-multiply contrast-105 saturate-110' : 'object-cover'}
               priority={variant === 'featured' || isHero}
               unoptimized

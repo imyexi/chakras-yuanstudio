@@ -15,8 +15,9 @@ import {
   generateChakraArchetypeResult,
   normalizeChakraScore
 } from '@/lib/chakra-archetypes'
+import { femaleArchetypeCardCopy } from '@/lib/archetype-card-copy'
 import { getDeviceId } from '@/lib/device'
-import { ChakraArchetypeAvatar, type ArchetypeAvatarGender } from '@/components/chakra-archetype-avatar'
+import { ChakraArchetypeAvatar } from '@/components/chakra-archetype-avatar'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,18 +33,9 @@ import {
   ReferenceLine,
   LabelList
 } from 'recharts'
-import { Sparkles, ChevronLeft, ChevronRight, RotateCcw, Sun, Play, Share2, Check, Users, Compass, Target, Shield, Quote, TrendingUp, Layers, Venus, Mars } from 'lucide-react'
+import { Sparkles, ChevronLeft, ChevronRight, RotateCcw, Sun, Play, Share2, Check, Users, Compass, Target, Shield, Quote, TrendingUp, Layers } from 'lucide-react'
 
 type PageState = 'welcome' | 'test' | 'result'
-
-const archetypeGenderOptions: Array<{
-  value: ArchetypeAvatarGender
-  label: string
-  Icon: typeof Venus
-}> = [
-  { value: 'female', label: '女性', Icon: Venus },
-  { value: 'male', label: '男性', Icon: Mars }
-]
 
 type StoredResult = {
   scores: Record<string, number>
@@ -67,38 +59,6 @@ const RARE_ARCHETYPE_CODES = new Set([
   'Crown-Heart',
   'ThirdEye-Heart'
 ])
-
-function ArchetypeGenderToggle({
-  value,
-  onChange
-}: {
-  value: ArchetypeAvatarGender
-  onChange: (value: ArchetypeAvatarGender) => void
-}) {
-  return (
-    <div className="inline-flex rounded-lg border border-white/10 bg-black/15 p-1">
-      {archetypeGenderOptions.map(({ value: optionValue, label, Icon }) => {
-        const isActive = value === optionValue
-
-        return (
-          <button
-            key={optionValue}
-            type="button"
-            onClick={() => onChange(optionValue)}
-            className={[
-              'inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors',
-              isActive ? 'bg-white text-slate-950 shadow-sm' : 'text-white/60 hover:bg-white/10 hover:text-white'
-            ].join(' ')}
-            aria-pressed={isActive}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
 
 // 欢迎页面组件
 function WelcomePage({ 
@@ -433,8 +393,11 @@ function ResultPage({
   onRestart: () => void
 }) {
   const [copySuccess, setCopySuccess] = useState(false)
-  const [avatarGender, setAvatarGender] = useState<ArchetypeAvatarGender>('female')
   const archetypeResult = generateChakraArchetypeResult(scores)
+  const archetypeKey = `${archetypeResult.primary.key}_${archetypeResult.secondary.key}`
+  const selectedCardCopy = femaleArchetypeCardCopy[archetypeKey]
+  const displayArchetypeName = selectedCardCopy?.displayName ?? archetypeResult.archetype.name
+  const displayArchetypeHeadline = selectedCardCopy?.headline ?? archetypeResult.archetype.headline
   const isRareArchetype = RARE_ARCHETYPE_CODES.has(archetypeResult.archetype.code)
   const roleByChakraName: Record<string, string> = {
     [archetypeResult.primary.name]: '主导能量',
@@ -445,9 +408,9 @@ function ResultPage({
   // 生成分享文本
   const getShareText = () => {
     const shareUrl = 'http://yyry.studio/chakras'
-    return `我的脉轮人物原型：${archetypeResult.archetype.name}
+    return `我的脉轮人物原型：${displayArchetypeName}
 
-${archetypeResult.archetype.headline}
+${displayArchetypeHeadline}
 
 代表人物参考：${formatArchetypePeople(archetypeResult.archetype.celebrities)}
 
@@ -600,29 +563,26 @@ ${archetypeResult.archetype.headline}
 
                   <p className="mb-1.5 text-sm text-white/60">你的脉轮人物原型</p>
                   <h2 className="mb-3 text-4xl font-bold text-white md:text-5xl xl:text-6xl">
-                    {archetypeResult.archetype.name}
+                    {displayArchetypeName}
                   </h2>
                   <div className="mb-5 flex items-start gap-3">
                     <Quote className="mt-1 h-5 w-5 shrink-0 text-amber-300" />
                     <p className="text-lg leading-relaxed text-white/90 md:text-xl xl:text-2xl">
-                      {archetypeResult.archetype.headline}
+                      {displayArchetypeHeadline}
                     </p>
                   </div>
 
                   <div className="mb-5 rounded-2xl border border-white/10 bg-gradient-to-br from-violet-300/10 via-white/5 to-amber-300/10 p-3 shadow-inner shadow-white/5 sm:p-4">
-                    <div className="mb-3 flex justify-center">
-                      <ArchetypeGenderToggle value={avatarGender} onChange={setAvatarGender} />
-                    </div>
                     <ChakraArchetypeAvatar
-                      name={archetypeResult.archetype.name}
+                      name={displayArchetypeName}
                       code={archetypeResult.archetype.code}
                       primaryKey={archetypeResult.primary.key}
                       secondaryKey={archetypeResult.secondary.key}
-                      gender={avatarGender}
+                      gender="female"
                       variant="hero"
                       active
                       showCaption={false}
-                      className="mx-auto max-w-[260px]"
+                      className="mx-auto max-w-[520px]"
                     />
                   </div>
 
