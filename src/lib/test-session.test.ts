@@ -96,6 +96,22 @@ describe('答题会话校验', () => {
     expect(restoreSession(存储)).toEqual({ kind: 'progress', answers: { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4 }, currentQuestion: 4 })
   })
 
+  it('只接受规范整数文本作为已保存题号', () => {
+    for (const 已保存题号 of ['', '   ', '1.0']) {
+      const 存储 = 创建内存存储({
+        [SESSION_STORAGE_KEYS.answers]: JSON.stringify({ 1: 0, 2: 1, 4: 2 }),
+        [SESSION_STORAGE_KEYS.currentQuestion]: 已保存题号,
+      })
+      expect(restoreSession(存储)).toEqual({ kind: 'progress', answers: { 1: 0, 2: 1, 4: 2 }, currentQuestion: 2 })
+    }
+
+    const 规范题号 = 创建内存存储({
+      [SESSION_STORAGE_KEYS.answers]: JSON.stringify({ 1: 0, 2: 1, 4: 2 }),
+      [SESSION_STORAGE_KEYS.currentQuestion]: '4',
+    })
+    expect(restoreSession(规范题号)).toEqual({ kind: 'progress', answers: { 1: 0, 2: 1, 4: 2 }, currentQuestion: 4 })
+  })
+
   it('稀疏但合法的答案仍恢复进度，而非回退到旧结果', () => {
     const 存储 = 创建内存存储({
       [SESSION_STORAGE_KEYS.answers]: JSON.stringify({ 2: 3 }),

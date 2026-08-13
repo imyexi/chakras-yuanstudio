@@ -105,7 +105,10 @@ function parseStoredJson(storage: Pick<Storage, 'getItem' | 'removeItem'>, key: 
 export function restoreSession(storage: Pick<Storage, 'getItem' | 'removeItem'>): RestoredSession {
   const answers = sanitizeAnswers(parseStoredJson(storage, SESSION_STORAGE_KEYS.answers))
   const savedQuestion = getStoredValue(storage, SESSION_STORAGE_KEYS.currentQuestion)
-  const currentQuestion = sanitizeCurrentQuestion(savedQuestion === null ? null : Number(savedQuestion), answers)
+  const savedQuestionValue = savedQuestion !== null && /^(0|[1-9]\d*)$/.test(savedQuestion)
+    ? Number(savedQuestion)
+    : null
+  const currentQuestion = sanitizeCurrentQuestion(savedQuestionValue, answers)
   const result = sanitizeStoredResult(parseStoredJson(storage, SESSION_STORAGE_KEYS.result))
   const missing = findFirstMissingQuestion(answers)
 
