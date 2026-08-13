@@ -9,6 +9,15 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 const TOTAL_QUESTIONS = 56
 const AUTO_ADVANCE_DELAY = 250
 const POINTER_TYPES = new Set(['mouse', 'touch', 'pen'])
+const CHAKRA_THEME_COLORS = {
+  1: 'var(--chakra-root)',
+  2: 'var(--chakra-solar)',
+  3: 'var(--chakra-sacral)',
+  4: 'var(--chakra-heart)',
+  5: 'var(--chakra-throat)',
+  6: 'var(--chakra-third-eye)',
+  7: 'var(--chakra-crown)',
+} as const
 
 export function QuestionPage({
   currentQuestion,
@@ -101,7 +110,9 @@ export function QuestionPage({
       { length: currentQuestion },
       (_, index) => answers[index + 1] !== undefined
     ).every(Boolean)
-  const style = { '--chakra-current': chakra.color } as React.CSSProperties
+  const style = {
+    '--chakra-current': CHAKRA_THEME_COLORS[chakra.id as keyof typeof CHAKRA_THEME_COLORS],
+  } as React.CSSProperties
 
   return (
     <article className="question-page" style={style}>

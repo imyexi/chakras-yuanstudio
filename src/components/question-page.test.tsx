@@ -45,6 +45,18 @@ afterEach(() => {
 })
 
 describe('QuestionPage 语义与键盘操作', () => {
+  it.each([
+    [0, 'var(--chakra-root)'],
+    [8, 'var(--chakra-solar)'],
+    [16, 'var(--chakra-sacral)'],
+  ] as const)('第 %i 题使用对应的脉轮主题令牌', (currentQuestion, expectedColor) => {
+    const { container } = renderQuestionPage({ currentQuestion })
+
+    expect(container.querySelector('.question-page')).toHaveStyle({
+      '--chakra-current': expectedColor,
+    })
+  })
+
   it('首题显示唯一题目标题、进度、轮组和五档真实单选项', () => {
     renderQuestionPage()
 
