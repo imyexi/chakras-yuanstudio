@@ -89,6 +89,7 @@ function expectSinglePageLandmarks() {
 
 afterEach(() => {
   hookControl.current = null
+  vi.restoreAllMocks()
   window.localStorage.clear()
   document.documentElement.className = ''
   document.documentElement.style.colorScheme = ''
@@ -142,6 +143,7 @@ describe('Home 状态装配', () => {
 
   it('welcome 续答显示真实进度，并映射继续与重新开始回调', async () => {
     const user = userEvent.setup()
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const { callbacks, session } = createSession({
       progressInfo: { answered: 24, total: 56, percentage: 43, completed: false },
     })
@@ -156,6 +158,7 @@ describe('Home 状态装配', () => {
     await user.click(screen.getByRole('button', { name: '重新开始' }))
 
     expect(callbacks.continueTest).toHaveBeenCalledOnce()
+    expect(confirm).toHaveBeenCalledWith('这会清除当前设备上的答题进度。是否重新开始？')
     expect(callbacks.restart).toHaveBeenCalledOnce()
   })
 
