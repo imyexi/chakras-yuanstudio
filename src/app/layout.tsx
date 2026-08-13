@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   keywords: ["脉轮测试", "Chakra", "海底轮", "心轮", "顶轮", "能量测试", "身心灵"],
   authors: [{ name: "圆圆如意" }],
   icons: {
-    icon: "/logo.svg",
+    icon: "/chakras/logo.svg",
   },
   openGraph: {
     title: "脉轮测试-圆圆如意",

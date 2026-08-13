@@ -6,7 +6,7 @@
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
     "build": "prisma generate && next build && node scripts/sync-standalone-assets.mjs",
     "sync:standalone-assets": "node scripts/sync-standalone-assets.mjs",
-    "start": "NODE_ENV=production bun .next/standalone/chakras-yuanstudio/server.js 2>&1 | tee server.log",
+    "start": "bun .next/standalone/server.js",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
