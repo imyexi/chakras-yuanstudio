@@ -86,6 +86,16 @@ function setExecCommand(implementation: (command: string) => boolean) {
   })
 }
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
+}
+
 afterEach(() => {
   vi.clearAllTimers()
   vi.useRealTimers()
@@ -334,5 +344,85 @@ https://yyry.studio/chakras`
     expect(screen.getByText('自动复制失败，请手动选择下方文字')).toBeInTheDocument()
     expect(screen.getAllByRole('textbox')).toHaveLength(1)
     expect(screen.getByRole('textbox', { name: '手动复制分享摘要' })).toHaveValue(shareText)
+  })
+
+  it.each(['resolve', 'reject'] as const)('卸载后 Clipboard %s 不再回退、更新状态或创建 timer', async (outcome) => {
+    vi.useFakeTimers()
+    const pending = deferred<void>()
+    const execCommand = vi.fn(() => false)
+    setClipboard(vi.fn(() => pending.promise))
+    setExecCommand(execCommand)
+    const { unmount } = renderHeartSolar()
+
+    fireEvent.click(screen.getByRole('button', { name: '复制分享摘要' }))
+    unmount()
+    await act(async () => {
+      if (outcome === 'resolve') pending.resolve()
+      else pending.reject(new Error('denied after unmount'))
+      await Promise.resolve()
+    })
+
+    expect(execCommand).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('两次复制逆序完成时旧失败不能覆盖最新成功或创建额外 timer', async () => {
+    vi.useFakeTimers()
+    const first = deferred<void>()
+    const second = deferred<void>()
+    const writeText = vi.fn()
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise)
+    setClipboard(writeText)
+    setExecCommand(() => false)
+    renderHeartSolar()
+
+    fireEvent.click(screen.getByRole('button', { name: '复制分享摘要' }))
+    fireEvent.click(screen.getByRole('button', { name: '复制分享摘要' }))
+    await act(async () => {
+      second.resolve()
+      await Promise.resolve()
+    })
+    expect(screen.getByText('已复制，可粘贴分享给好友')).toBeInTheDocument()
+    expect(vi.getTimerCount()).toBe(1)
+
+    await act(async () => {
+      first.reject(new Error('stale denial'))
+      await Promise.resolve()
+    })
+
+    expect(screen.getByText('已复制，可粘贴分享给好友')).toBeInTheDocument()
+    expect(screen.queryByText('自动复制失败，请手动选择下方文字')).not.toBeInTheDocument()
+    expect(vi.getTimerCount()).toBe(1)
+  })
+
+  it('两次复制逆序完成时旧成功不能覆盖最新失败或创建 timer', async () => {
+    vi.useFakeTimers()
+    const first = deferred<void>()
+    const second = deferred<void>()
+    const writeText = vi.fn()
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise)
+    setClipboard(writeText)
+    setExecCommand(() => false)
+    renderHeartSolar()
+
+    fireEvent.click(screen.getByRole('button', { name: '复制分享摘要' }))
+    fireEvent.click(screen.getByRole('button', { name: '复制分享摘要' }))
+    await act(async () => {
+      second.reject(new Error('latest denial'))
+      await Promise.resolve()
+    })
+    expect(screen.getByText('自动复制失败，请手动选择下方文字')).toBeInTheDocument()
+    const timerCountAfterLatestAttempt = vi.getTimerCount()
+
+    await act(async () => {
+      first.resolve()
+      await Promise.resolve()
+    })
+
+    expect(screen.getByText('自动复制失败，请手动选择下方文字')).toBeInTheDocument()
+    expect(screen.queryByText('已复制，可粘贴分享给好友')).not.toBeInTheDocument()
+    expect(vi.getTimerCount()).toBe(timerCountAfterLatestAttempt)
   })
 })

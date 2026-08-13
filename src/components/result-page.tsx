@@ -69,6 +69,8 @@ export function ResultPage({
 }): React.ReactNode {
   const [copyState, setCopyState] = useState<'idle' | 'success' | 'failed'>('idle')
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mountedRef = useRef(true)
+  const copyAttemptRef = useRef(0)
   const archetypeResult = generateChakraArchetypeResult(result.scores)
   const archetypeKey = `${archetypeResult.primary.key}_${archetypeResult.secondary.key}`
   const selectedCopy = femaleArchetypeCardCopy[archetypeKey]
@@ -81,25 +83,44 @@ export function ResultPage({
     chakras.reduce((sum, chakra) => sum + (result.scores[chakra.name] ?? 0), 0) / chakras.length
   )
 
-  useEffect(() => () => {
-    if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      copyAttemptRef.current += 1
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current)
+        copyTimerRef.current = null
+      }
+    }
   }, [])
 
   async function handleCopy() {
-    if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    const attempt = copyAttemptRef.current + 1
+    copyAttemptRef.current = attempt
+    if (copyTimerRef.current) {
+      clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = null
+    }
+
+    const isCurrentAttempt = () => mountedRef.current && copyAttemptRef.current === attempt
 
     let copied = false
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareText)
+        if (!isCurrentAttempt()) return
         copied = true
       }
     } catch {
+      if (!isCurrentAttempt()) return
       copied = false
     }
 
+    if (!isCurrentAttempt()) return
     if (!copied) copied = legacyCopy(shareText)
 
+    if (!isCurrentAttempt()) return
     if (!copied) {
       setCopyState('failed')
       return
@@ -107,6 +128,7 @@ export function ResultPage({
 
     setCopyState('success')
     copyTimerRef.current = setTimeout(() => {
+      if (!isCurrentAttempt()) return
       setCopyState('idle')
       copyTimerRef.current = null
     }, 2000)
