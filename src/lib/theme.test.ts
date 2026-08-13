@@ -7,6 +7,9 @@ import {
   writeStoredTheme,
 } from './theme'
 import { describe, expect, it } from 'vitest'
+import postcss from 'postcss'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 describe('主题存储与解析', () => {
   it('仅接受浅色和深色主题值', () => {
@@ -92,5 +95,32 @@ describe('主题存储与解析', () => {
 
     expect(root).toHaveClass('light')
     expect(root.style.colorScheme).toBe('light')
+  })
+
+  it('减少动态时 hover:scale-105 工具类取消缩放', () => {
+    const button = document.createElement('button')
+    button.className = 'hover:scale-105'
+    const stylesheet = postcss.parse(
+      readFileSync(resolve(process.cwd(), 'src/app/globals.css'), 'utf8')
+    )
+    let selector = ''
+    let transform = ''
+
+    stylesheet.walkAtRules('media', (media) => {
+      if (media.params.includes('prefers-reduced-motion')) {
+        media.walkRules((rule) => {
+          if (rule.selector.includes('scale-105')) {
+            selector = rule.selector.split(',')[0].trim().replace(/:hover$/, '')
+            rule.walkDecls('transform', (declaration) => {
+              transform = declaration.value
+            })
+          }
+        })
+      }
+    })
+
+    expect(button.className).toBe('hover:scale-105')
+    expect(selector).toBe('.hover\\:scale-105')
+    expect(transform).toBe('none')
   })
 })
