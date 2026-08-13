@@ -191,4 +191,20 @@
   html:focus-within {
     scroll-behavior: auto !important;
   }
+
+  .animate-pulse {
+    animation: none;
+  }
+
+  .transition-all {
+    transition-duration: var(--motion-duration);
+    transition-property: color, background-color, border-color, opacity, box-shadow;
+  }
+
+  .hover\\:scale-105:hover,
+  .hover\\:scale-102:hover,
+  .hover\\:-translate-y-1:hover,
+  .transition-all[style*="transform"] {
+    transform: none !important;
+  }
 }

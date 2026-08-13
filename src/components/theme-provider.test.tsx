@@ -1,6 +1,8 @@
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { hydrateRoot } from 'react-dom/client'
+import { renderToString } from 'react-dom/server'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ThemeProvider } from './theme-provider'
 import { ThemeToggle } from './theme-toggle'
 
@@ -50,6 +52,40 @@ function makeLocalStorageUnavailable() {
 }
 
 describe('ThemeProvider', () => {
+  it('服务端浅色标记在客户端深色首屏接管后无 hydration 错误', async () => {
+    const serverMarkup = renderToString(
+      <ThemeProvider>
+        <ThemeToggle />
+      </ThemeProvider>
+    )
+    const container = document.createElement('div')
+    container.innerHTML = serverMarkup
+    document.body.appendChild(container)
+    installMatchMedia(true)
+    window.localStorage.setItem('chakra-test-theme-v1', 'dark')
+    document.documentElement.className = 'dark'
+    document.documentElement.style.colorScheme = 'dark'
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    try {
+      await act(async () => {
+        hydrateRoot(
+          container,
+          <ThemeProvider>
+            <ThemeToggle />
+          </ThemeProvider>
+        )
+      })
+
+      expect(screen.getByRole('button', { name: '切换到浅色模式' })).toHaveTextContent('深色')
+      expect(document.documentElement).toHaveClass('dark')
+      expect(consoleError).not.toHaveBeenCalled()
+    } finally {
+      consoleError.mockRestore()
+      container.remove()
+    }
+  })
+
   it('没有手动选择时响应系统主题变化', () => {
     const systemTheme = installMatchMedia(false)
 

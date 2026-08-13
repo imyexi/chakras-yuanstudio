@@ -1,6 +1,7 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, useSyncExternalStore } from 'react'
+import { MotionConfig } from 'framer-motion'
 import {
   getThemeStorage,
   readStoredTheme,
@@ -32,47 +33,49 @@ function applyTheme(theme: Theme) {
   root.style.colorScheme = theme
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [{ theme, hasManualSelection }, setThemeState] = useState(() => {
-    if (typeof window === 'undefined') {
-      return { theme: 'light' as Theme, hasManualSelection: false }
-    }
+function getPreferredTheme(): Theme {
+  const storage = getThemeStorage()
+  const storedTheme = storage === null ? null : readStoredTheme(storage)
+  return resolveInitialTheme(storedTheme, getSystemTheme())
+}
 
-    const storage = getThemeStorage()
-    const storedTheme = storage === null ? null : readStoredTheme(storage)
-    return {
-      theme: resolveInitialTheme(storedTheme, getSystemTheme()),
-      hasManualSelection: storedTheme !== null,
-    }
-  })
+function getServerTheme(): Theme {
+  return 'light'
+}
+
+function subscribeToSystemTheme(onStoreChange: () => void) {
+  const storage = getThemeStorage()
+  if (storage !== null && readStoredTheme(storage) !== null) {
+    return () => {}
+  }
+
+  try {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    mediaQuery.addEventListener('change', onStoreChange)
+    return () => mediaQuery.removeEventListener('change', onStoreChange)
+  } catch {
+    return () => {}
+  }
+}
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [manualTheme, setManualTheme] = useState<Theme | null>(null)
+  const subscribe = useCallback((onStoreChange: () => void) => {
+    return manualTheme === null ? subscribeToSystemTheme(onStoreChange) : () => {}
+  }, [manualTheme])
+  const preferredTheme = useSyncExternalStore(
+    subscribe,
+    getPreferredTheme,
+    getServerTheme
+  )
+  const theme = manualTheme ?? preferredTheme
 
   useEffect(() => {
     applyTheme(theme)
   }, [theme])
 
-  useEffect(() => {
-    if (hasManualSelection) {
-      return
-    }
-
-    try {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-      const updateTheme = (event: MediaQueryListEvent) => {
-        setThemeState((current) => ({
-          ...current,
-          theme: event.matches ? 'dark' : 'light',
-        }))
-      }
-
-      mediaQuery.addEventListener('change', updateTheme)
-      return () => mediaQuery.removeEventListener('change', updateTheme)
-    } catch {
-      return
-    }
-  }, [hasManualSelection])
-
   const setTheme = useCallback((nextTheme: Theme) => {
-    setThemeState({ theme: nextTheme, hasManualSelection: true })
+    setManualTheme(nextTheme)
     const storage = getThemeStorage()
     if (storage !== null) {
       writeStoredTheme(storage, nextTheme)
@@ -85,7 +88,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
-      {children}
+      <MotionConfig reducedMotion="user">{children}</MotionConfig>
     </ThemeContext.Provider>
   )
 }
