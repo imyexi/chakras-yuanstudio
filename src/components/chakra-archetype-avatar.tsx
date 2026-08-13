@@ -43,13 +43,26 @@ function getArchetypeImageSrc(code: string, gender: ArchetypeAvatarGender) {
 
 function ImagePlaceholder({
   isCompact,
+  isHero,
+  name,
   primaryKey,
   secondaryKey
 }: {
   isCompact: boolean
+  isHero: boolean
+  name: string
   primaryKey: ChakraKey
   secondaryKey: ChakraKey
 }) {
+  if (isHero) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-center">
+        <p className="font-semibold text-foreground">{name}</p>
+        <p className="text-sm text-muted-foreground">人物原型图片暂时无法显示</p>
+      </div>
+    )
+  }
+
   return (
     <div
       className={[
@@ -119,20 +132,24 @@ export function ChakraArchetypeAvatar({
         <div
           className={[
             'relative h-full w-full overflow-hidden',
-            isHero
-              ? 'rounded-xl border border-white/25 bg-[radial-gradient(circle_at_50%_22%,#fff7ed_0%,#efe7ff_50%,#d9c8ff_100%)] shadow-2xl shadow-black/20 ring-1 ring-white/35 after:pointer-events-none after:absolute after:inset-0 after:bg-gradient-to-t after:from-violet-950/15 after:via-transparent after:to-white/10'
-              : 'rounded-md bg-white'
+            isHero ? '' : 'rounded-md bg-white'
           ].join(' ')}
         >
           {imageFailed ? (
-            <ImagePlaceholder isCompact={isCompact} primaryKey={primaryKey} secondaryKey={secondaryKey} />
+            <ImagePlaceholder
+              isCompact={isCompact}
+              isHero={isHero}
+              name={name}
+              primaryKey={primaryKey}
+              secondaryKey={secondaryKey}
+            />
           ) : (
             <Image
               src={imageSrc}
               alt={`${gender === 'female' ? '女性' : '男性'}${name}人物原型`}
               fill
               sizes={imageSizes}
-              className={isHero ? 'object-contain mix-blend-multiply contrast-105 saturate-110' : 'object-cover'}
+              className={isHero ? 'object-contain' : 'object-cover'}
               priority={variant === 'featured' || isHero}
               unoptimized
               onError={() => setFailedImageSrc(imageSrc)}
