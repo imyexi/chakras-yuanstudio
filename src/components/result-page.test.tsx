@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { archetypeMap } from '@/lib/chakra-archetypes'
 import type { StoredResult } from '@/lib/test-session'
 import { ResultPage } from './result-page'
+import { TestShell } from './test-shell'
+import { ThemeProvider } from './theme-provider'
 
 vi.mock('next/image', () => ({
   default: ({ priority: _priority, unoptimized: _unoptimized, fill: _fill, alt, ...props }: React.ComponentProps<'img'> & {
@@ -105,6 +107,24 @@ afterEach(() => {
 })
 
 describe('ResultPage 动态原型', () => {
+  it('装配进真实 TestShell 后只保留外壳 main，并以 article 承载结果报告', () => {
+    const { container } = render(
+      <ThemeProvider>
+        <TestShell>
+          <ResultPage
+            result={makeResult(FIXTURES[0].scores)}
+            backupStatus="idle"
+            storageWarning={null}
+            onRestart={vi.fn()}
+          />
+        </TestShell>
+      </ThemeProvider>
+    )
+
+    expect(screen.getAllByRole('main')).toHaveLength(1)
+    expect(container.querySelector('article.result-report')).toBeInTheDocument()
+  })
+
   it.each(FIXTURES)('$name 使用真实分数切换展示文案、人物与四项摘要', (fixture) => {
     render(
       <ResultPage

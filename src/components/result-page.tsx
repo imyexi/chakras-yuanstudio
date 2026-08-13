@@ -139,7 +139,7 @@ export function ResultPage({
   }
 
   return (
-    <main className="result-report">
+    <article className="result-report">
       <header className="result-report__header">
         <div>
           <p className="result-report__eyebrow">CHAKRA ARCHETYPE REPORT</p>
@@ -281,6 +281,6 @@ export function ResultPage({
         <p>本测试结果仅用于自我探索、情绪觉察和个人成长参考，不构成医学、心理诊断或治疗建议。如你正经历持续的心理痛苦或身体不适，请寻求专业人士支持。</p>
         <p>@圆圆如意</p>
       </footer>
-    </main>
+    </article>
   )
 }
