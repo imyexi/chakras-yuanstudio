@@ -79,6 +79,7 @@ export function useTestSession() {
       setStorageWarning(PROGRESS_WARNING)
       return false
     }
+    setStorageWarning((warning) => warning === PROGRESS_WARNING ? null : warning)
     return true
   }
 
@@ -149,6 +150,7 @@ export function useTestSession() {
   }
 
   const selectAnswer = (questionId: number, answerIndex: number) => {
+    if (pageStateRef.current === 'result') return
     const nextAnswers = { ...answersRef.current, [questionId]: answerIndex }
     updateAnswers(nextAnswers)
     persistProgress(nextAnswers, currentQuestionRef.current)

@@ -13,6 +13,10 @@ const COMPLETE_ANSWERS: Answers = Object.fromEntries(
   Array.from({ length: 56 }, (_, index) => [index + 1, index % 5]),
 )
 
+const SECOND_COMPLETE_ANSWERS: Answers = Object.fromEntries(
+  Array.from({ length: 56 }, (_, index) => [index + 1, (index + 2) % 5]),
+)
+
 const STORED_RESULT: StoredResult = {
   scores: {
     海底轮: -100,
@@ -94,8 +98,10 @@ describe('useTestSession 恢复、保存与导航', () => {
     expect(result.current.currentQuestion).toBe(4)
   })
 
-  it('恢复完整答案到欢迎页，并标记可以继续提交', async () => {
+  it('恢复完整答案后可继续到第 56 题并提交该答案快照', async () => {
     setProgress(COMPLETE_ANSWERS, 12)
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => successfulResponse())
+    vi.stubGlobal('fetch', fetchMock)
 
     const { result } = renderSession()
 
@@ -103,6 +109,17 @@ describe('useTestSession 恢复、保存与导航', () => {
     expect(result.current.currentQuestion).toBe(55)
     expect(result.current.answers).toEqual(COMPLETE_ANSWERS)
     expect(result.current.progressInfo).toEqual({ answered: 56, total: 56, percentage: 100, completed: true })
+
+    act(() => result.current.continueTest())
+    expect(result.current.pageState).toBe('test')
+    expect(result.current.currentQuestion).toBe(55)
+
+    await act(async () => result.current.submit())
+    expect(result.current.pageState).toBe('result')
+    expect(result.current.result?.answers).toEqual(COMPLETE_ANSWERS)
+    expect(result.current.backupStatus).toBe('saved')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).answers).toEqual(COMPLETE_ANSWERS)
   })
 
   it('恢复已保存结果时直接进入结果页，但不猜测线上备份成功', async () => {
@@ -114,6 +131,21 @@ describe('useTestSession 恢复、保存与导航', () => {
     expect(result.current.result).toEqual(STORED_RESULT)
     expect(result.current.answers).toEqual(COMPLETE_ANSWERS)
     expect(result.current.backupStatus).toBe('idle')
+  })
+
+  it('结果状态选答不会修改内存答案、结果或重新写入进度', async () => {
+    window.localStorage.setItem(SESSION_STORAGE_KEYS.result, JSON.stringify(STORED_RESULT))
+    const { result } = renderSession()
+    await waitFor(() => expect(result.current.pageState).toBe('result'))
+    const originalResult = result.current.result
+
+    act(() => result.current.selectAnswer(1, 4))
+
+    expect(result.current.pageState).toBe('result')
+    expect(result.current.answers).toEqual(COMPLETE_ANSWERS)
+    expect(result.current.result).toBe(originalResult)
+    expect(window.localStorage.getItem(SESSION_STORAGE_KEYS.answers)).toBeNull()
+    expect(window.localStorage.getItem(SESSION_STORAGE_KEYS.currentQuestion)).toBeNull()
   })
 
   it('选答时同步更新 Hook 状态和真实 localStorage', async () => {
@@ -144,6 +176,33 @@ describe('useTestSession 恢复、保存与导航', () => {
 
     expect(result.current.answers).toEqual({ 1: 3 })
     expect(result.current.storageWarning).toBe(PROGRESS_WARNING)
+  })
+
+  it('进度写入恢复成功后清除旧的保存警告', async () => {
+    const realSetItem = Storage.prototype.setItem
+    let storageAvailable = false
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+      if (!storageAvailable && (key === SESSION_STORAGE_KEYS.answers || key === SESSION_STORAGE_KEYS.currentQuestion)) {
+        throw new Error('暂时不可写')
+      }
+      return realSetItem.call(this, key, value)
+    })
+    const { result } = renderSession()
+    await waitFor(() => expect(result.current.pageState).toBe('welcome'))
+
+    act(() => {
+      result.current.start()
+      result.current.selectAnswer(1, 3)
+    })
+    expect(result.current.storageWarning).toBe(PROGRESS_WARNING)
+
+    storageAvailable = true
+    act(() => result.current.selectAnswer(2, 4))
+
+    expect(result.current.answers).toEqual({ 1: 3, 2: 4 })
+    expect(JSON.parse(window.localStorage.getItem(SESSION_STORAGE_KEYS.answers)!)).toEqual({ 1: 3, 2: 4 })
+    expect(window.localStorage.getItem(SESSION_STORAGE_KEYS.currentQuestion)).toBe('0')
+    expect(result.current.storageWarning).toBeNull()
   })
 
   it('取得 localStorage 属性抛错时仍可在内存答题和切题', async () => {
@@ -349,6 +408,33 @@ describe('useTestSession 提交、失败与竞态', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it('首次提交定位遗漏题，补齐后第二次提交成功', async () => {
+    const incompleteAnswers = { ...COMPLETE_ANSWERS }
+    delete incompleteAnswers[3]
+    setProgress(incompleteAnswers, 40)
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => successfulResponse())
+    vi.stubGlobal('fetch', fetchMock)
+    const { result } = renderSession()
+    await waitFor(() => expect(result.current.pageState).toBe('welcome'))
+
+    await act(async () => result.current.submit())
+    expect(result.current.pageState).toBe('test')
+    expect(result.current.currentQuestion).toBe(2)
+    expect(result.current.result).toBeNull()
+    expect(result.current.backupStatus).toBe('idle')
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    act(() => result.current.selectAnswer(3, 2))
+    await act(async () => result.current.submit())
+
+    expect(result.current.pageState).toBe('result')
+    expect(result.current.currentQuestion).toBe(2)
+    expect(result.current.result?.answers).toEqual(COMPLETE_ANSWERS)
+    expect(result.current.backupStatus).toBe('saved')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).answers).toEqual(COMPLETE_ANSWERS)
+  })
+
   it('完整提交在网络返回前就保存不可变结果、清理进度并显示 saving', async () => {
     setProgress(COMPLETE_ANSWERS, 55)
     const request = createDeferred<Response>()
@@ -505,5 +591,62 @@ describe('useTestSession 提交、失败与竞态', () => {
     expect(result.current.backupStatus).toBe('idle')
     expect(result.current.result).toBeNull()
     expect(result.current.answers).toEqual({})
+  })
+
+  it('旧会话请求晚于新提交失败时不污染新结果和备份状态', async () => {
+    setProgress(COMPLETE_ANSWERS, 55)
+    const oldRequest = createDeferred<Response>()
+    const newRequest = createDeferred<Response>()
+    const fetchMock = vi.fn()
+      .mockImplementationOnce(() => oldRequest.promise)
+      .mockImplementationOnce(() => newRequest.promise)
+    vi.stubGlobal('fetch', fetchMock)
+    const { result } = renderSession()
+    await waitFor(() => expect(result.current.pageState).toBe('welcome'))
+
+    let oldSubmit!: Promise<void>
+    act(() => {
+      oldSubmit = result.current.submit()
+    })
+    expect(result.current.pageState).toBe('result')
+    expect(result.current.result?.answers).toEqual(COMPLETE_ANSWERS)
+
+    let newSubmit!: Promise<void>
+    act(() => {
+      result.current.restart()
+      result.current.start()
+      for (let question = 1; question <= 56; question += 1) {
+        result.current.selectAnswer(question, SECOND_COMPLETE_ANSWERS[question])
+      }
+      newSubmit = result.current.submit()
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(result.current.pageState).toBe('result')
+    expect(result.current.result?.answers).toEqual(SECOND_COMPLETE_ANSWERS)
+    expect(result.current.backupStatus).toBe('saving')
+    const firstBody = JSON.parse(fetchMock.mock.calls[0][1]!.body as string)
+    const secondBody = JSON.parse(fetchMock.mock.calls[1][1]!.body as string)
+    expect(firstBody.answers).toEqual(COMPLETE_ANSWERS)
+    expect(secondBody.answers).toEqual(SECOND_COMPLETE_ANSWERS)
+
+    await act(async () => {
+      newRequest.resolve(successfulResponse())
+      await newSubmit
+    })
+    const newResult = result.current.result
+    expect(result.current.backupStatus).toBe('saved')
+
+    await act(async () => {
+      oldRequest.resolve({ ok: false, json: async () => ({ success: false }) } as Response)
+      await oldSubmit
+    })
+
+    expect(result.current.pageState).toBe('result')
+    expect(result.current.answers).toEqual(SECOND_COMPLETE_ANSWERS)
+    expect(result.current.result).toBe(newResult)
+    expect(result.current.result?.answers).toEqual(SECOND_COMPLETE_ANSWERS)
+    expect(result.current.backupStatus).toBe('saved')
+    expect(JSON.parse(window.localStorage.getItem(SESSION_STORAGE_KEYS.result)!)).toEqual(newResult)
   })
 })
