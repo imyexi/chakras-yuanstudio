@@ -96,6 +96,15 @@ describe('答题会话校验', () => {
     expect(restoreSession(存储)).toEqual({ kind: 'progress', answers: { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4 }, currentQuestion: 4 })
   })
 
+  it('稀疏但合法的答案仍恢复进度，而非回退到旧结果', () => {
+    const 存储 = 创建内存存储({
+      [SESSION_STORAGE_KEYS.answers]: JSON.stringify({ 2: 3 }),
+      [SESSION_STORAGE_KEYS.currentQuestion]: '损坏值',
+      [SESSION_STORAGE_KEYS.result]: JSON.stringify({ scores: 完整分数, answers: 完整答案, completedAt: '2026-08-13T10:00:00.000Z' }),
+    })
+    expect(restoreSession(存储)).toEqual({ kind: 'progress', answers: { 2: 3 }, currentQuestion: 0 })
+  })
+
   it('完整答案与合法结果优先恢复结果，无合法结果时恢复完成状态', () => {
     const 有结果 = 创建内存存储({
       [SESSION_STORAGE_KEYS.answers]: JSON.stringify(完整答案),
