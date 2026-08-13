@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import { calculateAllChakraScores } from './chakra-data'
 
 describe('脉轮计分回归', () => {
