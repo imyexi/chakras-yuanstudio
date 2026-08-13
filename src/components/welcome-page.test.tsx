@@ -21,6 +21,7 @@ function createCallbacks() {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks()
   window.localStorage.clear()
   document.documentElement.className = ''
   document.documentElement.style.colorScheme = ''
@@ -50,7 +51,7 @@ describe('WelcomePage', () => {
     expect(callbacks.onStart).toHaveBeenCalledOnce()
   })
 
-  it('24题续答显示进度并分别触发继续和重新开始回调', async () => {
+  it('24题续答显示进度并触发继续回调', async () => {
     const user = userEvent.setup()
     const callbacks = createCallbacks()
 
@@ -68,9 +69,38 @@ describe('WelcomePage', () => {
     expect(screen.getAllByRole('button', { name: '继续测试' })).toHaveLength(1)
 
     await user.click(screen.getByRole('button', { name: '继续测试' }))
-    await user.click(screen.getByRole('button', { name: '重新开始' }))
 
     expect(callbacks.onContinue).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    { answered: 24, total: 56, percentage: 43, completed: false },
+    { answered: 56, total: 56, percentage: 100, completed: true },
+  ] as const)('有进度时重新开始先说明本地进度会被清除，取消则保留进度', async (progressInfo) => {
+    const user = userEvent.setup()
+    const callbacks = createCallbacks()
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    renderWelcomePage({ progressInfo, ...callbacks })
+
+    await user.click(screen.getByRole('button', { name: '重新开始' }))
+
+    expect(confirm).toHaveBeenCalledWith('这会清除当前设备上的答题进度。是否重新开始？')
+    expect(callbacks.onRestart).not.toHaveBeenCalled()
+  })
+
+  it('确认清除当前设备答题进度后才重新开始', async () => {
+    const user = userEvent.setup()
+    const callbacks = createCallbacks()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    renderWelcomePage({
+      progressInfo: { answered: 24, total: 56, percentage: 43, completed: false },
+      ...callbacks,
+    })
+
+    await user.click(screen.getByRole('button', { name: '重新开始' }))
+
     expect(callbacks.onRestart).toHaveBeenCalledOnce()
   })
 

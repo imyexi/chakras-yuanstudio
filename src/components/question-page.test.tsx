@@ -160,14 +160,30 @@ describe('QuestionPage 语义与键盘操作', () => {
 })
 
 describe('QuestionPage pointer 自动前进与取消', () => {
-  it('mouse pointer 同步保存，249ms 不前进，250ms 前进一题', () => {
+  it('直接命中 RadioGroupItem 时同步保存，249ms 不前进，250ms 前进一题', () => {
     vi.useFakeTimers()
     const { callbacks } = renderQuestionPage()
-    const option = screen.getByRole('radio', { name: optionLabels[0] }).closest('label')
+    const option = screen.getByRole('radio', { name: optionLabels[0] })
 
-    fireEvent.pointerUp(option!, { pointerType: 'mouse' })
+    fireEvent.pointerUp(option, { pointerType: 'mouse' })
 
     expect(callbacks.onSelectAnswer).toHaveBeenCalledWith(1, 0)
+    expect(callbacks.onGoToQuestion).not.toHaveBeenCalled()
+
+    act(() => vi.advanceTimersByTime(249))
+    expect(callbacks.onGoToQuestion).not.toHaveBeenCalled()
+
+    act(() => vi.advanceTimersByTime(1))
+    expect(callbacks.onGoToQuestion).toHaveBeenCalledWith(1)
+  })
+
+  it('直接命中选项文字时同步保存，249ms 不前进，250ms 前进一题', () => {
+    vi.useFakeTimers()
+    const { callbacks } = renderQuestionPage()
+
+    fireEvent.pointerUp(screen.getByText(optionLabels[1]), { pointerType: 'mouse' })
+
+    expect(callbacks.onSelectAnswer).toHaveBeenCalledWith(1, 1)
     expect(callbacks.onGoToQuestion).not.toHaveBeenCalled()
 
     act(() => vi.advanceTimersByTime(249))

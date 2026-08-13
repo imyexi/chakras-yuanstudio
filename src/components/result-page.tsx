@@ -135,7 +135,10 @@ export function ResultPage({
   }
 
   function scrollToShareActions() {
-    document.getElementById(RESULT_SHARE_ACTIONS_ID)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? 'auto'
+      : 'smooth'
+    document.getElementById(RESULT_SHARE_ACTIONS_ID)?.scrollIntoView({ behavior, block: 'start' })
   }
 
   return (

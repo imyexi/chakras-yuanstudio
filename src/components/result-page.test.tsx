@@ -88,6 +88,19 @@ function setExecCommand(implementation: (command: string) => boolean) {
   })
 }
 
+function setReducedMotion(matches: boolean) {
+  vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+    matches: query === '(prefers-reduced-motion: reduce)' && matches,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }))
+}
+
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void
   let reject!: (reason?: unknown) => void
@@ -261,15 +274,23 @@ describe('ResultPage 保存状态与操作', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('当前浏览器无法持久保存结果')
   })
 
-  it('顶部分享快捷动作滚动到底部唯一分享区，两个重测入口复用回调', () => {
+  it.each([
+    [false, 'smooth'],
+    [true, 'auto'],
+  ] as const)('顶部分享快捷动作按减少动态偏好滚动到底部唯一分享区', (reducedMotion, behavior) => {
     const scrollIntoView = vi.fn()
     Element.prototype.scrollIntoView = scrollIntoView
-    const onRestart = vi.fn()
-    renderHeartSolar({ onRestart })
+    setReducedMotion(reducedMotion)
+    renderHeartSolar()
 
     fireEvent.click(screen.getByRole('button', { name: '分享结果' }))
     expect(screen.getByRole('region', { name: '分享与继续探索' })).toHaveAttribute('id', 'result-share-actions')
-    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior, block: 'start' })
+  })
+
+  it('两个重测入口复用回调', () => {
+    const onRestart = vi.fn()
+    renderHeartSolar({ onRestart })
 
     fireEvent.click(screen.getByRole('button', { name: '顶部重新测试' }))
     fireEvent.click(screen.getByRole('button', { name: '重新测试' }))

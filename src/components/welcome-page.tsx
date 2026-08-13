@@ -37,6 +37,9 @@ export function WelcomePage({ progressInfo, onStart, onContinue, onRestart }: We
   const isCompleted = progressInfo.answered === 56 && progressInfo.completed
   const primaryLabel = isNewUser ? '开始测试' : isCompleted ? '查看结果' : '继续测试'
   const onPrimaryAction = isNewUser ? onStart : onContinue
+  const confirmRestart = () => {
+    if (window.confirm('这会清除当前设备上的答题进度。是否重新开始？')) onRestart()
+  }
 
   return (
     <TestShell>
@@ -60,7 +63,7 @@ export function WelcomePage({ progressInfo, onStart, onContinue, onRestart }: We
             <div className="welcome-page__controls">
               <PrimaryAction onClick={onPrimaryAction}>{primaryLabel}</PrimaryAction>
               {!isNewUser && (
-                <button type="button" className="welcome-page__restart" onClick={onRestart}>
+                <button type="button" className="welcome-page__restart" onClick={confirmRestart}>
                   重新开始
                 </button>
               )}
