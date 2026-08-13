@@ -126,6 +126,20 @@ describe('Home 真实启动流程', () => {
 })
 
 describe('Home 状态装配', () => {
+  it('welcome 新用户开始测试只调用 start', async () => {
+    const user = userEvent.setup()
+    const { callbacks, session } = createSession({
+      progressInfo: { answered: 0, total: 56, percentage: 0, completed: false },
+    })
+
+    renderHome(session)
+    await user.click(screen.getByRole('button', { name: '开始测试' }))
+
+    expect(callbacks.start).toHaveBeenCalledOnce()
+    expect(callbacks.continueTest).not.toHaveBeenCalled()
+    expect(callbacks.restart).not.toHaveBeenCalled()
+  })
+
   it('welcome 续答显示真实进度，并映射继续与重新开始回调', async () => {
     const user = userEvent.setup()
     const { callbacks, session } = createSession({
