@@ -105,7 +105,7 @@ describe('useTestSession 恢复、保存与导航', () => {
     expect(result.current.progressInfo).toEqual({ answered: 56, total: 56, percentage: 100, completed: true })
   })
 
-  it('恢复已保存结果时直接进入结果页', async () => {
+  it('恢复已保存结果时直接进入结果页，但不猜测线上备份成功', async () => {
     window.localStorage.setItem(SESSION_STORAGE_KEYS.result, JSON.stringify(STORED_RESULT))
 
     const { result } = renderSession()
@@ -113,7 +113,7 @@ describe('useTestSession 恢复、保存与导航', () => {
     await waitFor(() => expect(result.current.pageState).toBe('result'))
     expect(result.current.result).toEqual(STORED_RESULT)
     expect(result.current.answers).toEqual(COMPLETE_ANSWERS)
-    expect(result.current.backupStatus).toBe('saved')
+    expect(result.current.backupStatus).toBe('idle')
   })
 
   it('选答时同步更新 Hook 状态和真实 localStorage', async () => {
@@ -235,6 +235,7 @@ describe('useTestSession 恢复、保存与导航', () => {
     expect(window.localStorage.getItem(SESSION_STORAGE_KEYS.currentQuestion)).toBeNull()
     expect(window.localStorage.getItem(SESSION_STORAGE_KEYS.result)).toBeNull()
     expect(window.localStorage.getItem(THEME_KEY)).toBe('dark')
+    expect(result.current.storageWarning).toBeNull()
 
     act(() => {
       result.current.selectAnswer(2, 3)
@@ -247,8 +248,9 @@ describe('useTestSession 恢复、保存与导航', () => {
     expect(window.localStorage.getItem(THEME_KEY)).toBe('dark')
   })
 
-  it('localStorage 的 removeItem 抛错时仍清空内存会话', async () => {
+  it('localStorage 的 removeItem 抛错时仍清空内存会话，但保留真实旧键并显示警告', async () => {
     setProgress({ 1: 2 }, 4)
+    window.localStorage.setItem(SESSION_STORAGE_KEYS.result, JSON.stringify(STORED_RESULT))
     const { result } = renderSession()
     await waitFor(() => expect(result.current.pageState).toBe('welcome'))
     vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
@@ -261,6 +263,25 @@ describe('useTestSession 恢复、保存与导航', () => {
     expect(result.current.answers).toEqual({})
     expect(result.current.result).toBeNull()
     expect(result.current.currentQuestion).toBe(0)
+    expect(window.localStorage.getItem(SESSION_STORAGE_KEYS.answers)).not.toBeNull()
+    expect(window.localStorage.getItem(SESSION_STORAGE_KEYS.currentQuestion)).not.toBeNull()
+    expect(window.localStorage.getItem(SESSION_STORAGE_KEYS.result)).not.toBeNull()
+    expect(result.current.storageWarning).toBe(PROGRESS_WARNING)
+  })
+
+  it('清理后的会话键无法读取确认时显示进度警告', async () => {
+    setProgress({ 1: 2 }, 4)
+    const { result } = renderSession()
+    await waitFor(() => expect(result.current.pageState).toBe('welcome'))
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('无法确认清理结果')
+    })
+
+    act(() => result.current.restart())
+
+    expect(result.current.pageState).toBe('welcome')
+    expect(result.current.answers).toEqual({})
+    expect(result.current.storageWarning).toBe(PROGRESS_WARNING)
   })
 
   it('hidden 与 beforeunload 在答题时兜底保存，卸载后不再执行', async () => {

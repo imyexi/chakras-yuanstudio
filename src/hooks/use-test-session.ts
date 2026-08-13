@@ -11,6 +11,7 @@ import {
   restoreSession,
   saveProgress,
   saveResult,
+  SESSION_STORAGE_KEYS,
   type Answers,
   type StoredResult,
 } from '@/lib/test-session'
@@ -32,6 +33,14 @@ function getStorage(): Storage | null {
     return window.localStorage
   } catch {
     return null
+  }
+}
+
+function sessionKeysAreCleared(storage: Storage): boolean {
+  try {
+    return Object.values(SESSION_STORAGE_KEYS).every((key) => storage.getItem(key) === null)
+  } catch {
+    return false
   }
 }
 
@@ -85,7 +94,6 @@ export function useTestSession() {
       updateAnswers(restored.result.answers)
       updateCurrentQuestion(55)
       setResult(restored.result)
-      setBackupStatus('saved')
       updatePageState('result')
     } else {
       updatePageState('welcome')
@@ -116,11 +124,12 @@ export function useTestSession() {
       clearProgress(storage)
       clearResult(storage)
     }
+    const storageCleared = storage !== null && sessionKeysAreCleared(storage)
     updateAnswers({})
     updateCurrentQuestion(0)
     setResult(null)
     setBackupStatus('idle')
-    setStorageWarning(storage ? null : PROGRESS_WARNING)
+    setStorageWarning(storageCleared ? null : PROGRESS_WARNING)
     updatePageState(nextPageState)
   }
 
