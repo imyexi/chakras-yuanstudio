@@ -130,8 +130,8 @@
   --card-foreground: #FAF7F1;
   --popover: #171816;
   --popover-foreground: #FAF7F1;
-  --primary: #E7BCC0;
-  --primary-foreground: #131412;
+  --primary: var(--brand-lacquer-red);
+  --primary-foreground: var(--brand-paper);
   --secondary: #242522;
   --secondary-foreground: #FAF7F1;
   --muted: #242522;
@@ -286,10 +286,27 @@
 }
 
 .welcome-page__intro,
+.welcome-page__meta,
 .welcome-page__progress {
   color: var(--muted-foreground);
   line-height: 1.8;
   margin: 1.5rem 0 0;
+}
+
+.welcome-page__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+.welcome-page__progress {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 1.5rem 0;
 }
 
 .welcome-page__progress p {
@@ -298,6 +315,16 @@
 
 .welcome-page__progress p + p {
   margin-top: 0.25rem;
+}
+
+.welcome-page__progress > div:first-child p:first-child {
+  color: var(--foreground);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+}
+
+.welcome-page__progress .welcome-page__controls {
+  margin-top: 0;
 }
 
 .welcome-page__controls {
@@ -358,19 +385,38 @@
   width: min(100%, 23rem);
 }
 
-.chakra-orbit span {
+.chakra-orbit__ring {
   border: 1px solid;
   border-radius: 999px;
   position: absolute;
 }
 
-.chakra-orbit span:nth-child(1) { border-color: var(--chakra-root); inset: 0; }
-.chakra-orbit span:nth-child(2) { border-color: var(--chakra-sacral); inset: 7%; }
-.chakra-orbit span:nth-child(3) { border-color: var(--chakra-solar); inset: 14%; }
-.chakra-orbit span:nth-child(4) { border-color: var(--chakra-heart); inset: 21%; }
-.chakra-orbit span:nth-child(5) { border-color: var(--chakra-throat); inset: 28%; }
-.chakra-orbit span:nth-child(6) { border-color: var(--chakra-third-eye); inset: 35%; }
-.chakra-orbit span:nth-child(7) { border-color: var(--chakra-crown); inset: 42%; }
+.chakra-orbit__ring--outer { border-color: var(--chakra-root); inset: 3%; }
+.chakra-orbit__ring--middle { border-color: var(--chakra-heart); inset: 22%; }
+.chakra-orbit__ring--inner { border-color: var(--chakra-crown); inset: 39%; }
+
+.chakra-orbit__node {
+  border-radius: 999px;
+  height: 0.75rem;
+  position: absolute;
+  width: 0.75rem;
+}
+
+.chakra-orbit__node--root { background: var(--chakra-root); bottom: 2%; left: 49%; }
+.chakra-orbit__node--sacral { background: var(--chakra-sacral); bottom: 16%; left: 16%; }
+.chakra-orbit__node--solar { background: var(--chakra-solar); left: 2%; top: 44%; }
+.chakra-orbit__node--heart { background: var(--chakra-heart); left: 16%; top: 16%; }
+.chakra-orbit__node--throat { background: var(--chakra-throat); left: 49%; top: 2%; }
+.chakra-orbit__node--third-eye { background: var(--chakra-third-eye); right: 16%; top: 16%; }
+.chakra-orbit__node--crown { background: var(--chakra-crown); right: 2%; top: 44%; }
+
+.chakra-orbit__center {
+  border: 1px solid var(--brand-champagne-gold);
+  height: 2rem;
+  position: absolute;
+  transform: rotate(45deg);
+  width: 2rem;
+}
 
 .welcome-page__reveal {
   animation: welcome-page-reveal 300ms ease-out both;
@@ -418,6 +464,20 @@
   .welcome-page__visual {
     grid-row: 2;
     min-height: 13rem;
+  }
+
+  .welcome-page__progress {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-page__progress .welcome-page__controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .welcome-page__progress .welcome-page__primary-action {
+    width: 100%;
   }
 
   .chakra-orbit {
@@ -654,8 +714,11 @@
   }
 
   .question-page__footer {
+    align-items: stretch;
     background: var(--background);
     bottom: 0;
+    flex-direction: column;
+    gap: 0.5rem;
     left: 0;
     margin: 0;
     padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
@@ -665,6 +728,7 @@
   }
 
   .question-actions button {
+    flex: 1;
     padding-inline: 1rem;
   }
 }
@@ -678,18 +742,9 @@
     grid-column: 3;
   }
 
-  .question-page__footer {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .question-actions button {
-    flex: 1;
-  }
 }
 
-@media (max-height: 620px) {
+@media (max-width: 767px) and (max-height: 667px) {
   .question-page__chapter span:first-child {
     display: none;
   }
@@ -1042,6 +1097,16 @@
   max-width: 760px;
 }
 
+@media (min-width: 768px) and (max-width: 1023px) {
+  .result-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .result-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 767px) {
   .result-report {
     padding-inline: 1rem;
@@ -1063,7 +1128,7 @@
   }
 
   .result-hero > :last-child {
-    grid-row: 1;
+    grid-row: auto;
     width: 100%;
   }
 

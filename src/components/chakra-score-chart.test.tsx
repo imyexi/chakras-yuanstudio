@@ -16,6 +16,8 @@ describe('ChakraScoreChart', () => {
     const bars = container.querySelectorAll<HTMLElement>('.chakra-score-track__bar')
     expect(bars[0]).toHaveStyle({ left: '0%', width: '50%' })
     expect(bars[1]).toHaveStyle({ left: '50%', width: '50%' })
+    expect(bars[0].style.backgroundColor).toBe('var(--chakra-root)')
+    expect(bars[1].style.backgroundColor).toBe('var(--chakra-solar)')
 
     const rows = within(screen.getByRole('table', { name: '七轮原始分数与角色' }))
       .getAllByRole('row')

@@ -117,7 +117,7 @@ export function QuestionPage({
   return (
     <article className="question-page" style={style}>
       <div className="question-page__scene-action">
-        <button className="question-page__exit" type="button" onClick={saveAndExit}>
+        <button className="question-page__exit md:hidden" type="button" onClick={saveAndExit}>
           {storageWarning ? '退出测试' : '暂存并退出'}
         </button>
         {storageWarning && (

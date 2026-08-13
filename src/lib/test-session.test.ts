@@ -162,6 +162,40 @@ describe('答题会话校验', () => {
     expect(结果损坏.数据).toHaveProperty(SESSION_STORAGE_KEYS.answers)
   })
 
+  it.each([
+    ['缺少分数轮', { scores: { ...完整分数, 顶轮: undefined }, answers: {}, completedAt: '2026-08-13T10:00:00.000Z' }],
+    ['分数越界', { scores: { ...完整分数, 心轮: 101 }, answers: {}, completedAt: '2026-08-13T10:00:00.000Z' }],
+    ['完成时间损坏', { scores: 完整分数, answers: {}, completedAt: '不是日期' }],
+  ])('%s的可解析结果只清理结果键，不影响合法进度键', (_name, 损坏结果) => {
+    const 存储 = 创建内存存储({
+      [SESSION_STORAGE_KEYS.answers]: JSON.stringify({ 1: 0, 2: 1 }),
+      [SESSION_STORAGE_KEYS.currentQuestion]: '1',
+      [SESSION_STORAGE_KEYS.result]: JSON.stringify(损坏结果),
+    })
+
+    expect(restoreSession(存储)).toEqual({ kind: 'progress', answers: { 1: 0, 2: 1 }, currentQuestion: 1 })
+    expect(存储.数据).not.toHaveProperty(SESSION_STORAGE_KEYS.result)
+    expect(存储.数据).toMatchObject({
+      [SESSION_STORAGE_KEYS.answers]: '{"1":0,"2":1}',
+      [SESSION_STORAGE_KEYS.currentQuestion]: '1',
+    })
+  })
+
+  it('JSON null 结果只清理结果键，不影响合法进度键', () => {
+    const 存储 = 创建内存存储({
+      [SESSION_STORAGE_KEYS.answers]: JSON.stringify({ 1: 0, 2: 1 }),
+      [SESSION_STORAGE_KEYS.currentQuestion]: '1',
+      [SESSION_STORAGE_KEYS.result]: 'null',
+    })
+
+    expect(restoreSession(存储)).toEqual({ kind: 'progress', answers: { 1: 0, 2: 1 }, currentQuestion: 1 })
+    expect(存储.数据).not.toHaveProperty(SESSION_STORAGE_KEYS.result)
+    expect(存储.数据).toMatchObject({
+      [SESSION_STORAGE_KEYS.answers]: '{"1":0,"2":1}',
+      [SESSION_STORAGE_KEYS.currentQuestion]: '1',
+    })
+  })
+
   it('读取或清理存储抛错时安全回退且继续尝试其他键', () => {
     const 已清理: string[] = []
     const 读取失败 = {

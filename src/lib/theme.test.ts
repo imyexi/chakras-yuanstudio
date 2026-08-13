@@ -12,6 +12,22 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 describe('主题存储与解析', () => {
+  it('深色主题的主操作仍使用漆器红和宣纸色文字', () => {
+    const stylesheet = postcss.parse(
+      readFileSync(resolve(process.cwd(), 'src/app/globals.css'), 'utf8')
+    )
+    const tokens = new Map<string, string>()
+
+    stylesheet.walkRules('.dark', (rule) => {
+      rule.walkDecls((declaration) => {
+        tokens.set(declaration.prop, declaration.value)
+      })
+    })
+
+    expect(tokens.get('--primary')).toBe('var(--brand-lacquer-red)')
+    expect(tokens.get('--primary-foreground')).toBe('var(--brand-paper)')
+  })
+
   it('仅接受浅色和深色主题值', () => {
     expect(isTheme('light')).toBe(true)
     expect(isTheme('dark')).toBe(true)

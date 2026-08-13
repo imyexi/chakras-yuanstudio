@@ -8,6 +8,7 @@ import { chakras } from '@/lib/chakra-data'
 import {
   formatArchetypePeople,
   generateChakraArchetypeResult,
+  type ChakraKey,
 } from '@/lib/chakra-archetypes'
 import type { BackupStatus } from '@/hooks/use-test-session'
 import type { StoredResult } from '@/lib/test-session'
@@ -27,6 +28,16 @@ const BACKUP_COPY: Partial<Record<BackupStatus, string>> = {
   saving: '正在备份结果',
   saved: '结果已在线备份',
   failed: '结果已保存在当前设备，在线备份暂未完成',
+}
+
+const CHAKRA_ACCENT_TOKENS: Record<ChakraKey, string> = {
+  root: 'var(--chakra-root)',
+  sacral: 'var(--chakra-sacral)',
+  solar: 'var(--chakra-solar)',
+  heart: 'var(--chakra-heart)',
+  throat: 'var(--chakra-throat)',
+  thirdEye: 'var(--chakra-third-eye)',
+  crown: 'var(--chakra-crown)',
 }
 
 function formatSignedScore(score: number) {
@@ -178,15 +189,15 @@ export function ResultPage({
       </section>
 
       <section className="result-summary" aria-label="结果摘要">
-        <div style={{ '--result-accent': 'var(--chakra-heart)' } as React.CSSProperties}>
+        <div style={{ '--result-accent': CHAKRA_ACCENT_TOKENS[archetypeResult.primary.key] } as React.CSSProperties}>
           <p>主导能量</p>
           <strong>{archetypeResult.primary.name} {formatSignedScore(archetypeResult.primary.score)}</strong>
         </div>
-        <div style={{ '--result-accent': 'var(--chakra-throat)' } as React.CSSProperties}>
+        <div style={{ '--result-accent': CHAKRA_ACCENT_TOKENS[archetypeResult.secondary.key] } as React.CSSProperties}>
           <p>辅助风格</p>
           <strong>{archetypeResult.secondary.name} {formatSignedScore(archetypeResult.secondary.score)}</strong>
         </div>
-        <div style={{ '--result-accent': 'var(--chakra-root)' } as React.CSSProperties}>
+        <div style={{ '--result-accent': CHAKRA_ACCENT_TOKENS[archetypeResult.lowest.key] } as React.CSSProperties}>
           <p>成长课题</p>
           <strong>{archetypeResult.lowest.name} {formatSignedScore(archetypeResult.lowest.score)}</strong>
         </div>

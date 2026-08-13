@@ -44,7 +44,10 @@ describe('WelcomePage', () => {
     )
     expect(screen.queryByRole('button', { name: '继续测试' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '重新开始' })).not.toBeInTheDocument()
-    expect(screen.getByText('56 道题 · 约 8 分钟 · 结果仅作自我探索参考')).toBeInTheDocument()
+    expect(screen.getByText('沿着七种能量线索，读出你此刻的主导力量、辅助风格与成长课题。')).toBeInTheDocument()
+    expect(screen.getByText('56 道题')).toBeInTheDocument()
+    expect(screen.getByText('约 5–10 分钟')).toBeInTheDocument()
+    expect(screen.getByText('可中途续答')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '开始测试' }))
 
@@ -55,18 +58,23 @@ describe('WelcomePage', () => {
     const user = userEvent.setup()
     const callbacks = createCallbacks()
 
-    renderWelcomePage({
+    const { container } = renderWelcomePage({
       progressInfo: { answered: 24, total: 56, percentage: 43, completed: false },
       ...callbacks,
     })
 
-    expect(screen.getByText('发现未完成的测试')).toBeInTheDocument()
-    expect(screen.getByText(/已完成 24\/56 题（43%）/)).toBeInTheDocument()
+    expect(screen.getByText('继续上一次探索')).toBeInTheDocument()
+    expect(screen.getByText('已完成 24 / 56 题 · 进度仅保存在当前设备')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '继续测试' })).toHaveAttribute(
       'data-variant',
       'primary'
     )
     expect(screen.getAllByRole('button', { name: '继续测试' })).toHaveLength(1)
+    const resumeRegion = screen.getByRole('region', { name: '上次测试进度' })
+    expect(resumeRegion).toContainElement(screen.getByRole('button', { name: '继续测试' }))
+    expect(container.querySelector('.welcome-page__content')).not.toContainElement(
+      screen.getByRole('button', { name: '继续测试' })
+    )
 
     await user.click(screen.getByRole('button', { name: '继续测试' }))
 
@@ -104,7 +112,7 @@ describe('WelcomePage', () => {
     expect(callbacks.onRestart).toHaveBeenCalledOnce()
   })
 
-  it('56题完成待查看结果时继续操作仍调用继续回调', async () => {
+  it('56题完成待查看结果时用继续测试进入末题，不冒充直接展示结果', async () => {
     const user = userEvent.setup()
     const callbacks = createCallbacks()
 
@@ -114,18 +122,19 @@ describe('WelcomePage', () => {
     })
 
     expect(screen.getByText('答案已完成，待查看结果')).toBeInTheDocument()
-    expect(screen.getByText(/已完成 56\/56 题（100%）/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '查看结果' })).toHaveAttribute(
+    expect(screen.getByText('已完成 56 / 56 题 · 进度仅保存在当前设备')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '继续测试' })).toHaveAttribute(
       'data-variant',
       'primary'
     )
+    expect(screen.queryByRole('button', { name: '查看结果' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '查看结果' }))
+    await user.click(screen.getByRole('button', { name: '继续测试' }))
 
     expect(callbacks.onContinue).toHaveBeenCalledOnce()
   })
 
-  it('提供原生说明入口和三项可读说明', () => {
+  it('提供原生说明入口和固定的题量、用时、续答及用途说明', () => {
     const callbacks = createCallbacks()
 
     renderWelcomePage({
@@ -137,9 +146,10 @@ describe('WelcomePage', () => {
 
     expect(details).toBeInTheDocument()
     expect(details?.querySelector('summary')).toHaveTextContent('测试如何进行')
-    expect(screen.getByText('请按真实感受作答。')).toBeInTheDocument()
-    expect(screen.getByText('可在同一设备上继续答题。')).toBeInTheDocument()
-    expect(screen.getByText('结果描述当前能量，而非永久人格。')).toBeInTheDocument()
+    expect(screen.getByText('共 56 道题，请按真实感受作答。')).toBeInTheDocument()
+    expect(screen.getByText('预计用时 5–10 分钟。')).toBeInTheDocument()
+    expect(screen.getByText('答题进度仅保存在当前设备，可中途续答。')).toBeInTheDocument()
+    expect(screen.getByText('结果仅用于自我探索，不构成医学或心理诊断。')).toBeInTheDocument()
   })
 
   it('通过真实外壳提供品牌、标签、主题切换和装饰语义', () => {
@@ -154,6 +164,11 @@ describe('WelcomePage', () => {
     expect(screen.getByText('圆圆如意')).toBeInTheDocument()
     expect(screen.getByText('Chakra Archetype Test')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '切换到深色模式' })).toBeInTheDocument()
-    expect(document.querySelector('[aria-hidden="true"]')).toHaveClass('chakra-orbit')
+    const orbit = document.querySelector('.chakra-orbit')
+    expect(orbit).toHaveAttribute('aria-hidden', 'true')
+    expect(orbit?.querySelectorAll('.chakra-orbit__ring')).toHaveLength(3)
+    expect(orbit?.querySelectorAll('.chakra-orbit__node')).toHaveLength(7)
+    expect(orbit?.querySelectorAll('.chakra-orbit__center')).toHaveLength(1)
+    expect(orbit).toHaveTextContent('')
   })
 })

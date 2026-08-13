@@ -1,6 +1,9 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import postcss from 'postcss'
 import { optionLabels, questions } from '@/lib/chakra-data'
 import { QuestionPage } from './question-page'
 
@@ -45,6 +48,39 @@ afterEach(() => {
 })
 
 describe('QuestionPage 语义与键盘操作', () => {
+  it('所有移动宽度的底栏都让保存状态与操作分行，375×667 隐藏非关键英文', () => {
+    const stylesheet = postcss.parse(
+      readFileSync(resolve(process.cwd(), 'src/app/globals.css'), 'utf8')
+    )
+    let footerDirection = ''
+    let footerAlignment = ''
+    let lowHeightChapterDisplay = ''
+
+    stylesheet.walkAtRules('media', (media) => {
+      if (media.params === '(max-width: 767px)') {
+        media.walkRules('.question-page__footer', (rule) => {
+          rule.walkDecls('flex-direction', (declaration) => {
+            footerDirection = declaration.value
+          })
+          rule.walkDecls('align-items', (declaration) => {
+            footerAlignment = declaration.value
+          })
+        })
+      }
+      if (media.params.includes('max-width: 767px') && media.params.includes('max-height: 667px')) {
+        media.walkRules('.question-page__chapter span:first-child', (rule) => {
+          rule.walkDecls('display', (declaration) => {
+            lowHeightChapterDisplay = declaration.value
+          })
+        })
+      }
+    })
+
+    expect(footerDirection).toBe('column')
+    expect(footerAlignment).toBe('stretch')
+    expect(lowHeightChapterDisplay).toBe('none')
+  })
+
   it.each([
     [0, 'var(--chakra-root)'],
     [8, 'var(--chakra-solar)'],

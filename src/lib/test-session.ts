@@ -109,7 +109,12 @@ export function restoreSession(storage: Pick<Storage, 'getItem' | 'removeItem'>)
     ? Number(savedQuestion)
     : null
   const currentQuestion = sanitizeCurrentQuestion(savedQuestionValue, answers)
-  const result = sanitizeStoredResult(parseStoredJson(storage, SESSION_STORAGE_KEYS.result))
+  const rawResult = getStoredValue(storage, SESSION_STORAGE_KEYS.result)
+  const storedResult = rawResult === null ? null : parseStoredJson(storage, SESSION_STORAGE_KEYS.result)
+  const result = sanitizeStoredResult(storedResult)
+  if (rawResult !== null && result === null) {
+    tryRemoveItem(storage, SESSION_STORAGE_KEYS.result)
+  }
   const missing = findFirstMissingQuestion(answers)
 
   if (Object.keys(answers).length > 0 && missing !== null) return { kind: 'progress', answers, currentQuestion }

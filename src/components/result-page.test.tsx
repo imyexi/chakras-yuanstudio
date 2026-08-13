@@ -1,5 +1,8 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import postcss from 'postcss'
 import { archetypeMap } from '@/lib/chakra-archetypes'
 import type { StoredResult } from '@/lib/test-session'
 import { ResultPage } from './result-page'
@@ -27,6 +30,7 @@ const FIXTURES = [
     secondary: '太阳轮 +71%',
     lowest: '海底轮 -42%',
     average: '心轮桥梁型 · 平均 33%',
+    accents: ['var(--chakra-heart)', 'var(--chakra-solar)', 'var(--chakra-root)', 'var(--primary)'],
     people: ['奥普拉·温弗瑞', '杨澜', '米歇尔·奥巴马'],
   },
   {
@@ -39,6 +43,7 @@ const FIXTURES = [
     secondary: '喉轮 +75%',
     lowest: '顶轮 -55%',
     average: '下三轮强 · 平均 31%',
+    accents: ['var(--chakra-sacral)', 'var(--chakra-throat)', 'var(--chakra-crown)', 'var(--primary)'],
     people: ['Lady Gaga', '王菲', '邓紫棋'],
   },
   {
@@ -51,6 +56,7 @@ const FIXTURES = [
     secondary: '海底轮 +74%',
     lowest: '脐轮 -61%',
     average: '上三轮强 · 平均 32%',
+    accents: ['var(--chakra-third-eye)', 'var(--chakra-root)', 'var(--chakra-sacral)', 'var(--primary)'],
     people: ['董明珠', '屠呦呦', '埃隆·马斯克'],
   },
 ] as const
@@ -157,6 +163,11 @@ describe('ResultPage 动态原型', () => {
     expect(within(summary).getByText(fixture.secondary)).toBeInTheDocument()
     expect(within(summary).getByText(fixture.lowest)).toBeInTheDocument()
     expect(within(summary).getByText(fixture.average)).toBeInTheDocument()
+    expect(
+      Array.from(summary.children, (item) =>
+        (item as HTMLElement).style.getPropertyValue('--result-accent')
+      )
+    ).toEqual(fixture.accents)
 
     const people = screen.getByRole('region', { name: '代表人物参考' })
     fixture.people.forEach((person) => {
@@ -167,6 +178,58 @@ describe('ResultPage 动态原型', () => {
 })
 
 describe('ResultPage 章节、数据与分析', () => {
+  it('移动端人物 Hero 保持结论在图片前且图片占满宽度', () => {
+    const stylesheet = postcss.parse(
+      readFileSync(resolve(process.cwd(), 'src/app/globals.css'), 'utf8')
+    )
+    let imageGridRow = ''
+    let imageWidth = ''
+
+    stylesheet.walkAtRules('media', (media) => {
+      if (media.params === '(max-width: 767px)') {
+        media.walkRules('.result-hero > :last-child', (rule) => {
+          rule.walkDecls('grid-row', (declaration) => {
+            imageGridRow = declaration.value
+          })
+          rule.walkDecls('width', (declaration) => {
+            imageWidth = declaration.value
+          })
+        })
+      }
+    })
+
+    expect(imageGridRow).toBe('auto')
+    expect(imageWidth).toBe('100%')
+  })
+
+  it('在 768 到 1023px 将人物 Hero 改为单列且摘要保持两列', () => {
+    const stylesheet = postcss.parse(
+      readFileSync(resolve(process.cwd(), 'src/app/globals.css'), 'utf8')
+    )
+    let heroColumns = ''
+    let summaryColumns = ''
+
+    stylesheet.walkAtRules('media', (media) => {
+      if (media.params.includes('min-width: 768px') && media.params.includes('max-width: 1023px')) {
+        media.walkRules((rule) => {
+          if (rule.selector === '.result-hero') {
+            rule.walkDecls('grid-template-columns', (declaration) => {
+              heroColumns = declaration.value
+            })
+          }
+          if (rule.selector === '.result-summary') {
+            rule.walkDecls('grid-template-columns', (declaration) => {
+              summaryColumns = declaration.value
+            })
+          }
+        })
+      }
+    })
+
+    expect(heroColumns).toBe('1fr')
+    expect(summaryColumns).toBe('repeat(2, minmax(0, 1fr))')
+  })
+
   it('按报告、人物、数据、分析和分享顺序组织章节且全页只有一个 h1', () => {
     renderHeartSolar()
 

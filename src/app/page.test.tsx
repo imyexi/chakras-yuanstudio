@@ -150,8 +150,8 @@ describe('Home 状态装配', () => {
 
     renderHome(session)
 
-    expect(screen.getByText('发现未完成的测试')).toBeInTheDocument()
-    expect(screen.getByText(/已完成 24\/56 题（43%）/)).toBeInTheDocument()
+    expect(screen.getByText('继续上一次探索')).toBeInTheDocument()
+    expect(screen.getByText('已完成 24 / 56 题 · 进度仅保存在当前设备')).toBeInTheDocument()
     expectSinglePageLandmarks()
 
     await user.click(screen.getByRole('button', { name: '继续测试' }))
@@ -162,7 +162,7 @@ describe('Home 状态装配', () => {
     expect(callbacks.restart).toHaveBeenCalledOnce()
   })
 
-  it('test 显示当前题和原答案，并把选择、导航与两个暂存入口映射到会话', () => {
+  it('test 显示当前题和原答案，并让桌面与移动暂存入口互补显示', () => {
     const { callbacks, session } = createSession({
       pageState: 'test',
       currentQuestion: 1,
@@ -182,11 +182,30 @@ describe('Home 状态装配', () => {
     const saveButtons = screen.getAllByRole('button', { name: '暂存并退出' })
     expect(saveButtons).toHaveLength(2)
     expect(saveButtons[0]).toHaveClass('hidden', 'md:inline-flex')
+    expect(saveButtons[1]).toHaveClass('md:hidden')
     saveButtons.forEach((button) => fireEvent.click(button))
 
     expect(callbacks.selectAnswer).toHaveBeenCalledWith(2, 3)
     expect(callbacks.goToQuestion).toHaveBeenCalledWith(0)
     expect(callbacks.goToQuestion).toHaveBeenCalledWith(2)
+    expect(callbacks.saveAndExit).toHaveBeenCalledTimes(2)
+  })
+
+  it('test 存储不可用时让桌面与移动入口都明确退出且不承诺暂存', () => {
+    const { callbacks, session } = createSession({
+      pageState: 'test',
+      storageWarning: '当前设备无法保存答题进度，关闭页面后可能丢失',
+    })
+
+    renderHome(session)
+
+    const exitButtons = screen.getAllByRole('button', { name: '退出测试' })
+    expect(exitButtons).toHaveLength(2)
+    expect(exitButtons[0]).toHaveClass('hidden', 'md:inline-flex')
+    expect(exitButtons[1]).toHaveClass('md:hidden')
+    expect(screen.queryByRole('button', { name: '暂存并退出' })).not.toBeInTheDocument()
+
+    exitButtons.forEach((button) => fireEvent.click(button))
     expect(callbacks.saveAndExit).toHaveBeenCalledTimes(2)
   })
 

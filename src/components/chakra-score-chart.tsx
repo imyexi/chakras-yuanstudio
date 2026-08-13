@@ -1,5 +1,15 @@
 import { chakras } from '@/lib/chakra-data'
 
+const CHAKRA_THEME_COLORS = {
+  1: 'var(--chakra-root)',
+  2: 'var(--chakra-solar)',
+  3: 'var(--chakra-sacral)',
+  4: 'var(--chakra-heart)',
+  5: 'var(--chakra-throat)',
+  6: 'var(--chakra-third-eye)',
+  7: 'var(--chakra-crown)',
+} as const
+
 type ChakraScoreChartProps = {
   scores: Record<string, number>
   primaryName: string
@@ -47,7 +57,11 @@ export function ChakraScoreChart({
               <span className="chakra-score-track__zero" />
               <span
                 className="chakra-score-track__bar"
-                style={{ backgroundColor: chakra.color, left, width }}
+                style={{
+                  backgroundColor: CHAKRA_THEME_COLORS[chakra.id as keyof typeof CHAKRA_THEME_COLORS],
+                  left,
+                  width,
+                }}
               />
             </div>
           </div>
