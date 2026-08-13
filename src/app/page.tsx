@@ -29,7 +29,7 @@ function ResultError({ onRestart }: { onRestart: () => void }) {
 export default function Home() {
   const session = useTestSession()
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (window.scrollY > 0) {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     }

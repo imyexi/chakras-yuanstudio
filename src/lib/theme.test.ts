@@ -95,6 +95,18 @@ describe('主题存储与解析', () => {
     expect(root.style.colorScheme).toBe('dark')
   })
 
+  it('首屏脚本关闭浏览器自动滚动恢复，避免刷新结果页后停在旧位置', () => {
+    const fakeWindow = {
+      history: { scrollRestoration: 'auto' },
+      localStorage: { getItem: () => null },
+      matchMedia: () => ({ matches: false }),
+    }
+
+    new Function('window', 'document', THEME_INITIALIZER_SCRIPT)(fakeWindow, document)
+
+    expect(fakeWindow.history.scrollRestoration).toBe('manual')
+  })
+
   it('首屏脚本在存储和媒体查询都不可用时安全回退浅色', () => {
     const root = document.documentElement
     root.className = 'dark'
