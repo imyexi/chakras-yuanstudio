@@ -2,6 +2,7 @@ import {
   isTheme,
   readStoredTheme,
   resolveInitialTheme,
+  THEME_INITIALIZER_SCRIPT,
   THEME_STORAGE_KEY,
   writeStoredTheme,
 } from './theme'
@@ -56,5 +57,40 @@ describe('主题存储与解析', () => {
 
     expect(writeStoredTheme(storage, 'dark')).toBe(true)
     expect(stored).toEqual({ [THEME_STORAGE_KEY]: 'dark' })
+  })
+
+  it('首屏脚本在存储不可用时仍按系统深色主题初始化', () => {
+    const root = document.documentElement
+    root.className = ''
+    root.style.colorScheme = ''
+    const fakeWindow = {
+      matchMedia: () => ({ matches: true }),
+      get localStorage(): Storage {
+        throw new Error('存储不可用')
+      },
+    }
+
+    new Function('window', 'document', THEME_INITIALIZER_SCRIPT)(fakeWindow, document)
+
+    expect(root).toHaveClass('dark')
+    expect(root.style.colorScheme).toBe('dark')
+  })
+
+  it('首屏脚本在存储和媒体查询都不可用时安全回退浅色', () => {
+    const root = document.documentElement
+    root.className = 'dark'
+    const fakeWindow = {
+      matchMedia: () => {
+        throw new Error('媒体查询不可用')
+      },
+      get localStorage(): Storage {
+        throw new Error('存储不可用')
+      },
+    }
+
+    new Function('window', 'document', THEME_INITIALIZER_SCRIPT)(fakeWindow, document)
+
+    expect(root).toHaveClass('light')
+    expect(root.style.colorScheme).toBe('light')
   })
 })

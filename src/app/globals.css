@@ -5,7 +5,7 @@
 
 @font-face {
   font-family: "Noto Serif SC Home";
-  src: url("/fonts/noto-serif-sc-home-400.woff2") format("woff2");
+  src: url("/chakras/fonts/noto-serif-sc-home-400.woff2") format("woff2");
   font-display: swap;
   font-style: normal;
   font-weight: 400;
@@ -13,7 +13,7 @@
 
 @font-face {
   font-family: "Noto Sans SC Home";
-  src: url("/fonts/noto-sans-sc-home-400.woff2") format("woff2");
+  src: url("/chakras/fonts/noto-sans-sc-home-400.woff2") format("woff2");
   font-display: swap;
   font-style: normal;
   font-weight: 400;
@@ -21,7 +21,7 @@
 
 @font-face {
   font-family: "Cormorant Garamond Home";
-  src: url("/fonts/cormorant-garamond-latin-400.woff2") format("woff2");
+  src: url("/chakras/fonts/cormorant-garamond-latin-400.woff2") format("woff2");
   font-display: swap;
   font-style: normal;
   font-weight: 400;
@@ -70,6 +70,8 @@
 
 :root {
   --radius: 0.625rem;
+  --motion-duration: 160ms;
+  --motion-transform: 1;
   --font-display: "Noto Serif SC Home", serif;
   --font-body: "Noto Sans SC Home", sans-serif;
   --font-latin: "Cormorant Garamond Home", serif;
@@ -181,12 +183,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
+  :root {
+    --motion-duration: 0ms;
+    --motion-transform: 0;
+  }
+
+  html:focus-within {
     scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
   }
 }

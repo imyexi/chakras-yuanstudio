@@ -35,6 +35,20 @@ afterEach(() => {
   document.documentElement.style.colorScheme = ''
 })
 
+function makeLocalStorageUnavailable() {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'localStorage')
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    get: () => {
+      throw new Error('存储不可用')
+    },
+  })
+
+  return () => {
+    Object.defineProperty(window, 'localStorage', descriptor!)
+  }
+}
+
 describe('ThemeProvider', () => {
   it('没有手动选择时响应系统主题变化', () => {
     const systemTheme = installMatchMedia(false)
@@ -70,5 +84,80 @@ describe('ThemeProvider', () => {
     act(() => systemTheme.change(false))
 
     expect(document.documentElement).toHaveClass('dark')
+  })
+
+  it('localStorage 属性访问失败时仍跟随系统主题', () => {
+    const systemTheme = installMatchMedia(true)
+    const restoreStorage = makeLocalStorageUnavailable()
+
+    try {
+      render(
+        <ThemeProvider>
+          <ThemeToggle />
+        </ThemeProvider>
+      )
+
+      expect(document.documentElement).toHaveClass('dark')
+      act(() => systemTheme.change(false))
+      expect(document.documentElement).toHaveClass('light')
+    } finally {
+      restoreStorage()
+    }
+  })
+
+  it('getItem 失败时仍跟随系统主题', () => {
+    const systemTheme = installMatchMedia(true)
+    const storage = window.localStorage
+    const getItem = storage.getItem
+    storage.getItem = () => {
+      throw new Error('读取失败')
+    }
+
+    try {
+      render(
+        <ThemeProvider>
+          <ThemeToggle />
+        </ThemeProvider>
+      )
+
+      expect(document.documentElement).toHaveClass('dark')
+      act(() => systemTheme.change(false))
+      expect(document.documentElement).toHaveClass('light')
+    } finally {
+      storage.getItem = getItem
+    }
+  })
+
+  it('matchMedia 失败时安全回退浅色', () => {
+    window.matchMedia = (() => {
+      throw new Error('媒体查询不可用')
+    }) as typeof window.matchMedia
+
+    render(
+      <ThemeProvider>
+        <ThemeToggle />
+      </ThemeProvider>
+    )
+
+    expect(document.documentElement).toHaveClass('light')
+  })
+
+  it('手动切换在存储不可用时仍更新主题', async () => {
+    const user = userEvent.setup()
+    installMatchMedia(false)
+    const restoreStorage = makeLocalStorageUnavailable()
+
+    try {
+      render(
+        <ThemeProvider>
+          <ThemeToggle />
+        </ThemeProvider>
+      )
+
+      await user.click(screen.getByRole('button', { name: '切换到深色模式' }))
+      expect(document.documentElement).toHaveClass('dark')
+    } finally {
+      restoreStorage()
+    }
   })
 })

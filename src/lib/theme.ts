@@ -2,6 +2,8 @@ export type Theme = 'light' | 'dark'
 
 export const THEME_STORAGE_KEY = 'chakra-test-theme-v1'
 
+export const THEME_INITIALIZER_SCRIPT = `(function(){var stored=null;try{stored=window.localStorage.getItem('${THEME_STORAGE_KEY}')}catch(error){}var systemDark=false;try{systemDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches}catch(error){}var theme=stored==='light'||stored==='dark'?stored:(systemDark?'dark':'light');var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(theme);root.style.colorScheme=theme})();`
+
 export function isTheme(value: unknown): value is Theme {
   return value === 'light' || value === 'dark'
 }
@@ -32,5 +34,13 @@ export function writeStoredTheme(
     return true
   } catch {
     return false
+  }
+}
+
+export function getThemeStorage(): Storage | null {
+  try {
+    return window.localStorage
+  } catch {
+    return null
   }
 }

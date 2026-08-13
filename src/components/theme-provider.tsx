@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import {
+  getThemeStorage,
   readStoredTheme,
   resolveInitialTheme,
   type Theme,
@@ -37,7 +38,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       return { theme: 'light' as Theme, hasManualSelection: false }
     }
 
-    const storedTheme = readStoredTheme(window.localStorage)
+    const storage = getThemeStorage()
+    const storedTheme = storage === null ? null : readStoredTheme(storage)
     return {
       theme: resolveInitialTheme(storedTheme, getSystemTheme()),
       hasManualSelection: storedTheme !== null,
@@ -71,7 +73,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback((nextTheme: Theme) => {
     setThemeState({ theme: nextTheme, hasManualSelection: true })
-    writeStoredTheme(window.localStorage, nextTheme)
+    const storage = getThemeStorage()
+    if (storage !== null) {
+      writeStoredTheme(storage, nextTheme)
+    }
   }, [])
 
   const toggleTheme = useCallback(() => {
