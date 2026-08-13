@@ -127,6 +127,33 @@ describe('Home 真实启动流程', () => {
 })
 
 describe('Home 状态装配', () => {
+  it('页面从答题切换到结果报告时回到顶部', () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    vi.spyOn(window, 'scrollY', 'get').mockReturnValue(223)
+    const { session } = createSession({
+      pageState: 'test',
+      currentQuestion: 55,
+      answers: { 56: 2 },
+    })
+    const view = renderHome(session)
+
+    scrollTo.mockClear()
+    hookControl.current = {
+      ...session,
+      pageState: 'result',
+      result: STORED_RESULT,
+      backupStatus: 'saved',
+    }
+    view.rerender(
+      <ThemeProvider>
+        <Home />
+      </ThemeProvider>
+    )
+
+    expect(scrollTo).toHaveBeenCalledOnce()
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'auto' })
+  })
+
   it('welcome 新用户开始测试只调用 start', async () => {
     const user = userEvent.setup()
     const { callbacks, session } = createSession({

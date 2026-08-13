@@ -1,5 +1,6 @@
 'use client'
 
+import * as React from 'react'
 import { QuestionPage } from '@/components/question-page'
 import { ResultPage } from '@/components/result-page'
 import { TestShell } from '@/components/test-shell'
@@ -27,6 +28,12 @@ function ResultError({ onRestart }: { onRestart: () => void }) {
 
 export default function Home() {
   const session = useTestSession()
+
+  React.useEffect(() => {
+    if (window.scrollY > 0) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    }
+  }, [session.pageState])
 
   if (session.pageState === 'booting') {
     return (
