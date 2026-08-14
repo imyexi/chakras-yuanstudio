@@ -77,7 +77,10 @@ describe('ThemeProvider', () => {
         )
       })
 
-      expect(screen.getByRole('button', { name: '切换到浅色模式' })).toHaveTextContent('深色')
+      expect(screen.getByRole('button', { name: '切换到浅色模式' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      )
       expect(document.documentElement).toHaveClass('dark')
       expect(consoleError).not.toHaveBeenCalled()
     } finally {

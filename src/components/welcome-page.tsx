@@ -20,19 +20,31 @@ function PrimaryAction({ children, onClick }: { children: React.ReactNode; onCli
 
 function ChakraOrbit() {
   return (
-    <div className="chakra-orbit" aria-hidden="true">
-      <span className="chakra-orbit__ring chakra-orbit__ring--outer" />
-      <span className="chakra-orbit__ring chakra-orbit__ring--middle" />
-      <span className="chakra-orbit__ring chakra-orbit__ring--inner" />
-      <span className="chakra-orbit__node chakra-orbit__node--root" />
-      <span className="chakra-orbit__node chakra-orbit__node--sacral" />
-      <span className="chakra-orbit__node chakra-orbit__node--solar" />
-      <span className="chakra-orbit__node chakra-orbit__node--heart" />
-      <span className="chakra-orbit__node chakra-orbit__node--throat" />
-      <span className="chakra-orbit__node chakra-orbit__node--third-eye" />
-      <span className="chakra-orbit__node chakra-orbit__node--crown" />
-      <span className="chakra-orbit__center" />
-    </div>
+    <svg
+      className="chakra-orbit"
+      viewBox="0 0 100 100"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle className="chakra-orbit__ring chakra-orbit__ring--outer" cx="50" cy="50" r="47" />
+      <circle className="chakra-orbit__ring chakra-orbit__ring--middle" cx="50" cy="50" r="28" />
+      <circle className="chakra-orbit__ring chakra-orbit__ring--inner" cx="50" cy="50" r="11" />
+      <circle className="chakra-orbit__node chakra-orbit__node--root" cx="50" cy="97" r="1.75" />
+      <circle className="chakra-orbit__node chakra-orbit__node--sacral" cx="16.766" cy="83.234" r="1.75" />
+      <circle className="chakra-orbit__node chakra-orbit__node--solar" cx="3" cy="50" r="1.75" />
+      <circle className="chakra-orbit__node chakra-orbit__node--heart" cx="16.766" cy="16.766" r="1.75" />
+      <circle className="chakra-orbit__node chakra-orbit__node--throat" cx="50" cy="3" r="1.75" />
+      <circle className="chakra-orbit__node chakra-orbit__node--third-eye" cx="83.234" cy="16.766" r="1.75" />
+      <circle className="chakra-orbit__node chakra-orbit__node--crown" cx="97" cy="50" r="1.75" />
+      <rect
+        className="chakra-orbit__center"
+        x="46"
+        y="46"
+        width="8"
+        height="8"
+        transform="rotate(45 50 50)"
+      />
+    </svg>
   )
 }
 

@@ -1,5 +1,6 @@
 'use client'
 
+import { Moon, Sun } from 'lucide-react'
 import { useTheme } from './theme-provider'
 
 export function ThemeToggle() {
@@ -14,7 +15,11 @@ export function ThemeToggle() {
       aria-pressed={isDark}
       onClick={toggleTheme}
     >
-      {isDark ? '深色' : '浅色'}
+      <span className="theme-toggle__track" aria-hidden="true">
+        <span className="theme-toggle__thumb" />
+        <Sun className="theme-toggle__icon theme-toggle__icon--sun" size={14} strokeWidth={1.75} />
+        <Moon className="theme-toggle__icon theme-toggle__icon--moon" size={14} strokeWidth={1.75} />
+      </span>
     </button>
   )
 }

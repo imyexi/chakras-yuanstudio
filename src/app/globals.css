@@ -178,8 +178,71 @@
 
 .theme-toggle {
   align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--muted-foreground);
+  cursor: pointer;
   display: inline-flex;
   justify-content: center;
+  padding: 0.25rem;
+}
+
+.theme-toggle__track {
+  align-items: center;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  height: 1.75rem;
+  overflow: hidden;
+  position: relative;
+  width: 3.5rem;
+}
+
+.theme-toggle__thumb {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  height: 1.375rem;
+  left: 0.125rem;
+  position: absolute;
+  top: 0.125rem;
+  transition: transform var(--motion-duration) ease;
+  width: 1.375rem;
+}
+
+.theme-toggle__icon {
+  justify-self: center;
+  pointer-events: none;
+  position: relative;
+  transition: color var(--motion-duration) ease, opacity var(--motion-duration) ease;
+  z-index: 1;
+}
+
+.theme-toggle__icon--sun {
+  color: var(--foreground);
+}
+
+.theme-toggle__icon--moon {
+  opacity: 0.45;
+}
+
+.dark .theme-toggle__thumb,
+.theme-toggle[aria-pressed="true"] .theme-toggle__thumb {
+  transform: translateX(1.75rem);
+}
+
+.dark .theme-toggle__icon--sun,
+.theme-toggle[aria-pressed="true"] .theme-toggle__icon--sun {
+  color: var(--muted-foreground);
+  opacity: 0.45;
+}
+
+.dark .theme-toggle__icon--moon,
+.theme-toggle[aria-pressed="true"] .theme-toggle__icon--moon {
+  color: var(--foreground);
+  opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -206,6 +269,11 @@
   .hover\:-translate-y-1:hover,
   .transition-all[style*="transform"] {
     transform: none !important;
+  }
+
+  .theme-toggle__thumb,
+  .theme-toggle__icon {
+    transition: none;
   }
 }
 
@@ -336,12 +404,20 @@
 }
 
 .welcome-page__primary-action {
+  align-items: center;
   background: var(--primary);
   border: 1px solid var(--primary);
   color: var(--primary-foreground);
   cursor: pointer;
+  display: inline-flex;
   font: inherit;
-  padding: 0.65rem 1.5rem;
+  font-size: 1.125rem;
+  justify-content: center;
+  line-height: 1.25;
+  max-width: 100%;
+  min-height: 3.5rem;
+  padding: 0.875rem 2rem;
+  width: 10rem;
 }
 
 .welcome-page__restart {
@@ -379,43 +455,35 @@
 
 .chakra-orbit {
   aspect-ratio: 1;
-  display: grid;
-  place-items: center;
-  position: relative;
+  display: block;
+  height: auto;
+  overflow: visible;
   width: min(100%, 23rem);
 }
 
 .chakra-orbit__ring {
-  border: 1px solid;
-  border-radius: 999px;
-  position: absolute;
+  fill: none;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
 }
 
-.chakra-orbit__ring--outer { border-color: var(--chakra-root); inset: 3%; }
-.chakra-orbit__ring--middle { border-color: var(--chakra-heart); inset: 22%; }
-.chakra-orbit__ring--inner { border-color: var(--chakra-crown); inset: 39%; }
+.chakra-orbit__ring--outer { stroke: var(--chakra-root); }
+.chakra-orbit__ring--middle { stroke: var(--chakra-heart); }
+.chakra-orbit__ring--inner { stroke: var(--chakra-crown); }
 
-.chakra-orbit__node {
-  border-radius: 999px;
-  height: 0.75rem;
-  position: absolute;
-  width: 0.75rem;
-}
-
-.chakra-orbit__node--root { background: var(--chakra-root); bottom: 2%; left: 49%; }
-.chakra-orbit__node--sacral { background: var(--chakra-sacral); bottom: 16%; left: 16%; }
-.chakra-orbit__node--solar { background: var(--chakra-solar); left: 2%; top: 44%; }
-.chakra-orbit__node--heart { background: var(--chakra-heart); left: 16%; top: 16%; }
-.chakra-orbit__node--throat { background: var(--chakra-throat); left: 49%; top: 2%; }
-.chakra-orbit__node--third-eye { background: var(--chakra-third-eye); right: 16%; top: 16%; }
-.chakra-orbit__node--crown { background: var(--chakra-crown); right: 2%; top: 44%; }
+.chakra-orbit__node--root { fill: var(--chakra-root); }
+.chakra-orbit__node--sacral { fill: var(--chakra-sacral); }
+.chakra-orbit__node--solar { fill: var(--chakra-solar); }
+.chakra-orbit__node--heart { fill: var(--chakra-heart); }
+.chakra-orbit__node--throat { fill: var(--chakra-throat); }
+.chakra-orbit__node--third-eye { fill: var(--chakra-third-eye); }
+.chakra-orbit__node--crown { fill: var(--chakra-crown); }
 
 .chakra-orbit__center {
-  border: 1px solid var(--brand-champagne-gold);
-  height: 2rem;
-  position: absolute;
-  transform: rotate(45deg);
-  width: 2rem;
+  fill: none;
+  stroke: var(--brand-champagne-gold);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
 }
 
 .welcome-page__reveal {

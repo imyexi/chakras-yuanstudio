@@ -1,5 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import postcss from 'postcss'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ThemeProvider } from './theme-provider'
 import { WelcomePage } from './welcome-page'
@@ -170,5 +173,80 @@ describe('WelcomePage', () => {
     expect(orbit?.querySelectorAll('.chakra-orbit__node')).toHaveLength(7)
     expect(orbit?.querySelectorAll('.chakra-orbit__center')).toHaveLength(1)
     expect(orbit).toHaveTextContent('')
+  })
+
+  it('七个能量点沿 270 度顺序落在同一外环上且不会被裁切', () => {
+    const callbacks = createCallbacks()
+    const expectedAngles = new Map([
+      ['chakra-orbit__node--root', 90],
+      ['chakra-orbit__node--sacral', 135],
+      ['chakra-orbit__node--solar', 180],
+      ['chakra-orbit__node--heart', 225],
+      ['chakra-orbit__node--throat', 270],
+      ['chakra-orbit__node--third-eye', 315],
+      ['chakra-orbit__node--crown', 0],
+    ])
+
+    renderWelcomePage({
+      progressInfo: { answered: 0, total: 56, percentage: 0, completed: false },
+      ...callbacks,
+    })
+
+    const outerRing = document.querySelector('.chakra-orbit__ring--outer')
+    const nodes = Array.from(document.querySelectorAll('.chakra-orbit__node'))
+    const centerX = Number(outerRing?.getAttribute('cx'))
+    const centerY = Number(outerRing?.getAttribute('cy'))
+    const radius = Number(outerRing?.getAttribute('r'))
+    const viewBox = outerRing?.closest('svg')?.getAttribute('viewBox')?.split(' ').map(Number)
+
+    expect(radius).toBeGreaterThan(0)
+    expect(viewBox).toHaveLength(4)
+    expect(nodes).toHaveLength(7)
+    expect(new Set(nodes.map((node) => `${node.getAttribute('cx')},${node.getAttribute('cy')}`))).toHaveProperty(
+      'size',
+      7
+    )
+    nodes.forEach((node) => {
+      const nodeX = Number(node.getAttribute('cx'))
+      const nodeY = Number(node.getAttribute('cy'))
+      const nodeRadius = Number(node.getAttribute('r'))
+      const distance = Math.hypot(nodeX - centerX, nodeY - centerY)
+      const angle = (Math.atan2(nodeY - centerY, nodeX - centerX) * 180) / Math.PI
+      const normalizedAngle = (angle + 360) % 360
+      const chakraClass = Array.from(node.classList).find((name) =>
+        name.startsWith('chakra-orbit__node--')
+      )
+      const expectedAngle = expectedAngles.get(chakraClass ?? '')
+
+      if (!viewBox || expectedAngle === undefined) throw new Error('能量点缺少有效的几何定义')
+      const [viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight] = viewBox
+
+      expect(distance).toBeCloseTo(radius, 4)
+      expect(normalizedAngle).toBeCloseTo(expectedAngle, 4)
+      expect(nodeX - nodeRadius).toBeGreaterThanOrEqual(viewBoxX)
+      expect(nodeY - nodeRadius).toBeGreaterThanOrEqual(viewBoxY)
+      expect(nodeX + nodeRadius).toBeLessThanOrEqual(viewBoxX + viewBoxWidth)
+      expect(nodeY + nodeRadius).toBeLessThanOrEqual(viewBoxY + viewBoxHeight)
+    })
+  })
+
+  it('欢迎页主操作具有约 160x56 的醒目点击尺寸', () => {
+    const stylesheet = postcss.parse(
+      readFileSync(resolve(process.cwd(), 'src/app/globals.css'), 'utf8')
+    )
+    const declarations = new Map<string, string>()
+
+    stylesheet.walkRules('.welcome-page__primary-action', (rule) => {
+      if (rule.parent?.type !== 'root') return
+
+      rule.walkDecls((declaration) => {
+        declarations.set(declaration.prop, declaration.value)
+      })
+    })
+
+    expect(declarations.get('width')).toBe('10rem')
+    expect(declarations.get('max-width')).toBe('100%')
+    expect(declarations.get('min-height')).toBe('3.5rem')
+    expect(declarations.get('font-size')).toBe('1.125rem')
   })
 })
