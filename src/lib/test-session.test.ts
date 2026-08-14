@@ -1,8 +1,10 @@
 import {
   SESSION_STORAGE_KEYS,
+  V2_SESSION_STORAGE_KEYS,
   clearProgress,
   clearResult,
   findFirstMissingQuestion,
+  getSessionStorageKeys,
   restoreSession,
   sanitizeAnswers,
   sanitizeCurrentQuestion,
@@ -235,5 +237,84 @@ describe('答题会话校验', () => {
       setItem: () => { throw new Error('写入失败') },
     }
     expect(saveResult(结果失败, { scores: 完整分数, answers: {}, completedAt: '2026-08-13T10:00:00.000Z' })).toBe(false)
+  })
+
+  it('V1 和 V2 使用完全不同的三组会话键', () => {
+    expect(getSessionStorageKeys()).toEqual(SESSION_STORAGE_KEYS)
+    expect(getSessionStorageKeys('v1')).toEqual(SESSION_STORAGE_KEYS)
+    expect(getSessionStorageKeys('v2')).toEqual(V2_SESSION_STORAGE_KEYS)
+
+    for (const v2Key of Object.values(V2_SESSION_STORAGE_KEYS)) {
+      expect(Object.values(SESSION_STORAGE_KEYS)).not.toContain(v2Key)
+    }
+  })
+
+  it('V2 只恢复自己的进度，只有 V1 数据时保持空会话', () => {
+    const 只有V1 = 创建内存存储({
+      [SESSION_STORAGE_KEYS.answers]: JSON.stringify({ 1: 0 }),
+      [SESSION_STORAGE_KEYS.currentQuestion]: '0',
+      [SESSION_STORAGE_KEYS.result]: JSON.stringify({
+        scores: 完整分数,
+        answers: 完整答案,
+        completedAt: '2026-08-13T10:00:00.000Z',
+      }),
+    })
+    expect(restoreSession(只有V1, 'v2')).toEqual({ kind: 'empty' })
+    expect(只有V1.数据).toHaveProperty(SESSION_STORAGE_KEYS.answers)
+    expect(只有V1.数据).toHaveProperty(SESSION_STORAGE_KEYS.result)
+
+    const 两个版本 = 创建内存存储({
+      [SESSION_STORAGE_KEYS.answers]: JSON.stringify({ 1: 0 }),
+      [SESSION_STORAGE_KEYS.currentQuestion]: '0',
+      [V2_SESSION_STORAGE_KEYS.answers]: JSON.stringify({ 1: 4, 2: 3 }),
+      [V2_SESSION_STORAGE_KEYS.currentQuestion]: '1',
+    })
+    expect(restoreSession(两个版本)).toEqual({
+      kind: 'progress',
+      answers: { 1: 0 },
+      currentQuestion: 0,
+    })
+    expect(restoreSession(两个版本, 'v2')).toEqual({
+      kind: 'progress',
+      answers: { 1: 4, 2: 3 },
+      currentQuestion: 1,
+    })
+  })
+
+  it('V2 保存和清除只操作 V2 键，不覆盖或删除 V1', () => {
+    const v1结果 = {
+      scores: 完整分数,
+      answers: 完整答案,
+      completedAt: '2026-08-13T10:00:00.000Z',
+    }
+    const 存储 = 创建内存存储({
+      [SESSION_STORAGE_KEYS.answers]: JSON.stringify({ 1: 0 }),
+      [SESSION_STORAGE_KEYS.currentQuestion]: '0',
+      [SESSION_STORAGE_KEYS.result]: JSON.stringify(v1结果),
+    })
+
+    expect(saveProgress(存储, { 1: 4 }, 8, 'v2')).toBe(true)
+    expect(saveResult(存储, {
+      scores: { ...完整分数, 海底轮: -80 },
+      answers: { 1: 4 },
+      completedAt: '2026-08-14T10:00:00.000Z',
+    }, 'v2')).toBe(true)
+
+    expect(存储.数据[SESSION_STORAGE_KEYS.answers]).toBe('{"1":0}')
+    expect(存储.数据[SESSION_STORAGE_KEYS.currentQuestion]).toBe('0')
+    expect(存储.数据[SESSION_STORAGE_KEYS.result]).toBe(JSON.stringify(v1结果))
+    expect(存储.数据[V2_SESSION_STORAGE_KEYS.answers]).toBe('{"1":4}')
+    expect(存储.数据[V2_SESSION_STORAGE_KEYS.currentQuestion]).toBe('8')
+    expect(存储.数据).toHaveProperty(V2_SESSION_STORAGE_KEYS.result)
+
+    clearProgress(存储, 'v2')
+    clearResult(存储, 'v2')
+
+    expect(存储.数据).toHaveProperty(SESSION_STORAGE_KEYS.answers)
+    expect(存储.数据).toHaveProperty(SESSION_STORAGE_KEYS.currentQuestion)
+    expect(存储.数据).toHaveProperty(SESSION_STORAGE_KEYS.result)
+    expect(存储.数据).not.toHaveProperty(V2_SESSION_STORAGE_KEYS.answers)
+    expect(存储.数据).not.toHaveProperty(V2_SESSION_STORAGE_KEYS.currentQuestion)
+    expect(存储.数据).not.toHaveProperty(V2_SESSION_STORAGE_KEYS.result)
   })
 })

@@ -1,3 +1,5 @@
+import type { TestVersion } from '@/lib/test-version'
+
 export type Answers = Record<number, number>
 export type ChakraScores = Record<string, number>
 export type StoredResult = {
@@ -11,11 +13,27 @@ export type RestoredSession =
   | { kind: 'result'; result: StoredResult }
   | { kind: 'empty' }
 
-export const SESSION_STORAGE_KEYS = {
+export type SessionStorageKeys = {
+  readonly answers: string
+  readonly currentQuestion: string
+  readonly result: string
+}
+
+export const SESSION_STORAGE_KEYS: SessionStorageKeys = {
   answers: 'chakra-test-answers',
   currentQuestion: 'chakra-test-current-question',
   result: 'chakra-test-result',
-} as const
+}
+
+export const V2_SESSION_STORAGE_KEYS: SessionStorageKeys = {
+  answers: 'chakra-test-v2-answers',
+  currentQuestion: 'chakra-test-v2-current-question',
+  result: 'chakra-test-v2-result',
+}
+
+export function getSessionStorageKeys(version: TestVersion = 'v1'): SessionStorageKeys {
+  return version === 'v2' ? V2_SESSION_STORAGE_KEYS : SESSION_STORAGE_KEYS
+}
 
 const CHAKRA_KEYS = ['海底轮', '太阳轮', '脐轮', '心轮', '喉轮', '眉心轮', '顶轮'] as const
 
@@ -102,18 +120,22 @@ function parseStoredJson(storage: Pick<Storage, 'getItem' | 'removeItem'>, key: 
   }
 }
 
-export function restoreSession(storage: Pick<Storage, 'getItem' | 'removeItem'>): RestoredSession {
-  const answers = sanitizeAnswers(parseStoredJson(storage, SESSION_STORAGE_KEYS.answers))
-  const savedQuestion = getStoredValue(storage, SESSION_STORAGE_KEYS.currentQuestion)
+export function restoreSession(
+  storage: Pick<Storage, 'getItem' | 'removeItem'>,
+  version: TestVersion = 'v1',
+): RestoredSession {
+  const keys = getSessionStorageKeys(version)
+  const answers = sanitizeAnswers(parseStoredJson(storage, keys.answers))
+  const savedQuestion = getStoredValue(storage, keys.currentQuestion)
   const savedQuestionValue = savedQuestion !== null && /^(0|[1-9]\d*)$/.test(savedQuestion)
     ? Number(savedQuestion)
     : null
   const currentQuestion = sanitizeCurrentQuestion(savedQuestionValue, answers)
-  const rawResult = getStoredValue(storage, SESSION_STORAGE_KEYS.result)
-  const storedResult = rawResult === null ? null : parseStoredJson(storage, SESSION_STORAGE_KEYS.result)
+  const rawResult = getStoredValue(storage, keys.result)
+  const storedResult = rawResult === null ? null : parseStoredJson(storage, keys.result)
   const result = sanitizeStoredResult(storedResult)
   if (rawResult !== null && result === null) {
-    tryRemoveItem(storage, SESSION_STORAGE_KEYS.result)
+    tryRemoveItem(storage, keys.result)
   }
   const missing = findFirstMissingQuestion(answers)
 
@@ -135,14 +157,24 @@ function trySetItem(storage: Pick<Storage, 'setItem'>, key: string, value: strin
   }
 }
 
-export function saveProgress(storage: Pick<Storage, 'setItem'>, answers: Answers, currentQuestion: number): boolean {
-  const savedAnswers = trySetItem(storage, SESSION_STORAGE_KEYS.answers, JSON.stringify(answers))
-  const savedQuestion = trySetItem(storage, SESSION_STORAGE_KEYS.currentQuestion, String(currentQuestion))
+export function saveProgress(
+  storage: Pick<Storage, 'setItem'>,
+  answers: Answers,
+  currentQuestion: number,
+  version: TestVersion = 'v1',
+): boolean {
+  const keys = getSessionStorageKeys(version)
+  const savedAnswers = trySetItem(storage, keys.answers, JSON.stringify(answers))
+  const savedQuestion = trySetItem(storage, keys.currentQuestion, String(currentQuestion))
   return savedAnswers && savedQuestion
 }
 
-export function saveResult(storage: Pick<Storage, 'setItem'>, result: StoredResult): boolean {
-  return trySetItem(storage, SESSION_STORAGE_KEYS.result, JSON.stringify(result))
+export function saveResult(
+  storage: Pick<Storage, 'setItem'>,
+  result: StoredResult,
+  version: TestVersion = 'v1',
+): boolean {
+  return trySetItem(storage, getSessionStorageKeys(version).result, JSON.stringify(result))
 }
 
 function tryRemoveItem(storage: Pick<Storage, 'removeItem'>, key: string): void {
@@ -153,11 +185,18 @@ function tryRemoveItem(storage: Pick<Storage, 'removeItem'>, key: string): void 
   }
 }
 
-export function clearProgress(storage: Pick<Storage, 'removeItem'>): void {
-  tryRemoveItem(storage, SESSION_STORAGE_KEYS.answers)
-  tryRemoveItem(storage, SESSION_STORAGE_KEYS.currentQuestion)
+export function clearProgress(
+  storage: Pick<Storage, 'removeItem'>,
+  version: TestVersion = 'v1',
+): void {
+  const keys = getSessionStorageKeys(version)
+  tryRemoveItem(storage, keys.answers)
+  tryRemoveItem(storage, keys.currentQuestion)
 }
 
-export function clearResult(storage: Pick<Storage, 'removeItem'>): void {
-  tryRemoveItem(storage, SESSION_STORAGE_KEYS.result)
+export function clearResult(
+  storage: Pick<Storage, 'removeItem'>,
+  version: TestVersion = 'v1',
+): void {
+  tryRemoveItem(storage, getSessionStorageKeys(version).result)
 }
