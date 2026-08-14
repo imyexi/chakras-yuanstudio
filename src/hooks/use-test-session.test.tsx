@@ -3,7 +3,13 @@ import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useTestSession } from '@/hooks/use-test-session'
-import { SESSION_STORAGE_KEYS, type Answers, type StoredResult } from '@/lib/test-session'
+import {
+  getSessionStorageKeys,
+  SESSION_STORAGE_KEYS,
+  type Answers,
+  type StoredResult,
+} from '@/lib/test-session'
+import type { TestVersion } from '@/lib/test-version'
 
 const THEME_KEY = 'chakra-test-theme-v1'
 const PROGRESS_WARNING = '当前设备无法保存答题进度，关闭页面后可能丢失'
@@ -31,9 +37,18 @@ const STORED_RESULT: StoredResult = {
   completedAt: '2026-08-13T10:00:00.000Z',
 }
 
-function setProgress(answers: Answers, currentQuestion: number) {
-  window.localStorage.setItem(SESSION_STORAGE_KEYS.answers, JSON.stringify(answers))
-  window.localStorage.setItem(SESSION_STORAGE_KEYS.currentQuestion, String(currentQuestion))
+function setTestPathname(pathname: string) {
+  window.history.replaceState({}, '', pathname)
+}
+
+function setProgress(
+  answers: Answers,
+  currentQuestion: number,
+  version: TestVersion = 'v1',
+) {
+  const keys = getSessionStorageKeys(version)
+  window.localStorage.setItem(keys.answers, JSON.stringify(answers))
+  window.localStorage.setItem(keys.currentQuestion, String(currentQuestion))
 }
 
 function renderSession() {
@@ -56,6 +71,7 @@ function successfulResponse() {
 
 describe('useTestSession 恢复、保存与导航', () => {
   beforeEach(() => {
+    setTestPathname('/chakras')
     window.localStorage.clear()
   })
 
@@ -63,14 +79,19 @@ describe('useTestSession 恢复、保存与导航', () => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
     window.localStorage.clear()
+    setTestPathname('/chakras')
   })
 
-  it('服务端首次渲染固定为 booting，且不会读取浏览器存储', () => {
+  it('服务端首次渲染保持版本未解析，且不会读取浏览器存储', () => {
+    const getItem = vi.spyOn(Storage.prototype, 'getItem')
+
     function Probe() {
-      return useTestSession().pageState
+      const session = useTestSession()
+      return `${session.pageState}:${String(session.version)}`
     }
 
-    expect(renderToString(<Probe />)).toContain('booting')
+    expect(renderToString(<Probe />)).toContain('booting:null')
+    expect(getItem).not.toHaveBeenCalled()
   })
 
   it('客户端 effect 后把空存储恢复为欢迎页', async () => {
@@ -379,6 +400,7 @@ describe('useTestSession 恢复、保存与导航', () => {
 
 describe('useTestSession 提交、失败与竞态', () => {
   beforeEach(() => {
+    setTestPathname('/chakras')
     window.localStorage.clear()
     window.localStorage.setItem('chakra-device-id', 'device-test-fixed')
   })
@@ -387,6 +409,55 @@ describe('useTestSession 提交、失败与竞态', () => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
     window.localStorage.clear()
+    setTestPathname('/chakras')
+  })
+
+  it('在 /chakra 只恢复和写入 V2，并向现有 API 提交同一份 V2 分数', async () => {
+    setTestPathname('/chakra')
+    const v1Keys = getSessionStorageKeys('v1')
+    const v2Keys = getSessionStorageKeys('v2')
+    const v1Answers = JSON.stringify({ 1: 4, 2: 4 })
+    window.localStorage.setItem(v1Keys.answers, v1Answers)
+    window.localStorage.setItem(v1Keys.currentQuestion, '1')
+    window.localStorage.setItem(THEME_KEY, 'dark')
+
+    const v2Answers: Answers = Object.fromEntries(
+      Array.from({ length: 56 }, (_, index) => [index + 1, 2]),
+    )
+    v2Answers[2] = 0
+    v2Answers[3] = 0
+    setProgress(v2Answers, 55, 'v2')
+
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async () => successfulResponse(),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { result } = renderSession()
+    await waitFor(() => expect(result.current.pageState).toBe('welcome'))
+    expect(result.current.version).toBe('v2')
+    expect(result.current.answers).toEqual(v2Answers)
+
+    await act(async () => result.current.submit())
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [url, options] = fetchMock.mock.calls[0]
+    const body = JSON.parse(options!.body as string)
+    expect(url).toBe('/chakras/api/test-results')
+    expect(Object.keys(body).sort()).toEqual(['answers', 'deviceId', 'scores'])
+    expect(result.current.result?.scores.海底轮).toBe(45)
+    expect(body.scores).toEqual(result.current.result?.scores)
+    expect(JSON.parse(window.localStorage.getItem(v2Keys.result)!)).toEqual(result.current.result)
+    expect(window.localStorage.getItem(v2Keys.answers)).toBeNull()
+    expect(window.localStorage.getItem(v2Keys.currentQuestion)).toBeNull()
+    expect(window.localStorage.getItem(v1Keys.answers)).toBe(v1Answers)
+    expect(window.localStorage.getItem(v1Keys.currentQuestion)).toBe('1')
+
+    act(() => result.current.restart())
+    expect(window.localStorage.getItem(v2Keys.result)).toBeNull()
+    expect(window.localStorage.getItem(v1Keys.answers)).toBe(v1Answers)
+    expect(window.localStorage.getItem(v1Keys.currentQuestion)).toBe('1')
+    expect(window.localStorage.getItem(THEME_KEY)).toBe('dark')
   })
 
   it.each([

@@ -4,14 +4,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { calculateAllChakraScores } from '@/lib/chakra-data'
 import { getDeviceId } from '@/lib/device'
+import { resolveTestVersion, type TestVersion } from '@/lib/test-version'
 import {
   clearProgress,
   clearResult,
   findFirstMissingQuestion,
+  getSessionStorageKeys,
   restoreSession,
   saveProgress,
   saveResult,
-  SESSION_STORAGE_KEYS,
   type Answers,
   type StoredResult,
 } from '@/lib/test-session'
@@ -36,15 +37,16 @@ function getStorage(): Storage | null {
   }
 }
 
-function sessionKeysAreCleared(storage: Storage): boolean {
+function sessionKeysAreCleared(storage: Storage, version: TestVersion): boolean {
   try {
-    return Object.values(SESSION_STORAGE_KEYS).every((key) => storage.getItem(key) === null)
+    return Object.values(getSessionStorageKeys(version)).every((key) => storage.getItem(key) === null)
   } catch {
     return false
   }
 }
 
 export function useTestSession() {
+  const [version, setVersion] = useState<TestVersion | null>(null)
   const [pageState, setPageState] = useState<PageState>('booting')
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
@@ -55,6 +57,7 @@ export function useTestSession() {
   const pageStateRef = useRef<PageState>('booting')
   const currentQuestionRef = useRef(0)
   const answersRef = useRef<Answers>({})
+  const versionRef = useRef<TestVersion | null>(null)
   const sessionRef = useRef(0)
   const submittingRef = useRef(false)
 
@@ -74,8 +77,11 @@ export function useTestSession() {
   }
 
   const persistProgress = (nextAnswers: Answers, nextQuestion: number) => {
+    const activeVersion = versionRef.current
+    if (activeVersion === null) return false
+
     const storage = getStorage()
-    if (!storage || !saveProgress(storage, nextAnswers, nextQuestion)) {
+    if (!storage || !saveProgress(storage, nextAnswers, nextQuestion, activeVersion)) {
       setStorageWarning(PROGRESS_WARNING)
       return false
     }
@@ -84,8 +90,14 @@ export function useTestSession() {
   }
 
   useEffect(() => {
+    const resolvedVersion = resolveTestVersion(window.location.pathname)
+    versionRef.current = resolvedVersion
+    setVersion(resolvedVersion)
+
     const storage = getStorage()
-    const restored = storage ? restoreSession(storage) : { kind: 'empty' as const }
+    const restored = storage
+      ? restoreSession(storage, resolvedVersion)
+      : { kind: 'empty' as const }
 
     if (restored.kind === 'progress' || restored.kind === 'completed') {
       updateAnswers(restored.answers)
@@ -118,14 +130,17 @@ export function useTestSession() {
   }, [])
 
   const resetSession = (nextPageState: 'welcome' | 'test') => {
+    const activeVersion = versionRef.current
+    if (activeVersion === null) return
+
     sessionRef.current += 1
     submittingRef.current = false
     const storage = getStorage()
     if (storage) {
-      clearProgress(storage)
-      clearResult(storage)
+      clearProgress(storage, activeVersion)
+      clearResult(storage, activeVersion)
     }
-    const storageCleared = storage !== null && sessionKeysAreCleared(storage)
+    const storageCleared = storage !== null && sessionKeysAreCleared(storage, activeVersion)
     updateAnswers({})
     updateCurrentQuestion(0)
     setResult(null)
@@ -163,7 +178,8 @@ export function useTestSession() {
   }
 
   const submit = async () => {
-    if (submittingRef.current) return
+    const activeVersion = versionRef.current
+    if (activeVersion === null || submittingRef.current) return
     submittingRef.current = true
 
     const missingQuestion = findFirstMissingQuestion(answersRef.current)
@@ -176,7 +192,9 @@ export function useTestSession() {
 
     const submissionSession = sessionRef.current
     const snapshotAnswers = Object.freeze({ ...answersRef.current })
-    const snapshotScores = Object.freeze(calculateAllChakraScores(snapshotAnswers))
+    const snapshotScores = Object.freeze(
+      calculateAllChakraScores(snapshotAnswers, activeVersion),
+    )
     const snapshot = Object.freeze({
       scores: snapshotScores,
       answers: snapshotAnswers,
@@ -184,8 +202,8 @@ export function useTestSession() {
     })
 
     const storage = getStorage()
-    if (storage && saveResult(storage, snapshot)) {
-      clearProgress(storage)
+    if (storage && saveResult(storage, snapshot, activeVersion)) {
+      clearProgress(storage, activeVersion)
       setStorageWarning(null)
     } else {
       setStorageWarning(RESULT_WARNING)
@@ -227,6 +245,7 @@ export function useTestSession() {
   }, [answers])
 
   return {
+    version,
     pageState,
     currentQuestion,
     answers,

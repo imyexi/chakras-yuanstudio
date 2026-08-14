@@ -59,6 +59,7 @@ function createSession(overrides: Partial<Session> = {}) {
     restart: vi.fn(),
   }
   const session: Session = {
+    version: 'v1',
     pageState: 'welcome',
     currentQuestion: 0,
     answers: {},
