@@ -43,7 +43,6 @@ export function QuestionPage({
     (item) => question.id >= item.startQuestion && question.id <= item.endQuestion
   )!
   const selectedAnswer = answers[question.id]
-  const answeredCount = Object.keys(answers).length
   const percentage = Math.round(((currentQuestion + 1) / TOTAL_QUESTIONS) * 100)
   const answerGroupRef = React.useRef<HTMLDivElement>(null)
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -113,16 +112,6 @@ export function QuestionPage({
     onSubmit()
   }
 
-  const allPreviousQuestionsAreAnswered = Array.from(
-    { length: currentQuestion },
-    (_, index) => answers[index + 1] !== undefined
-  ).every(Boolean)
-  const nextQuestion = questions[currentQuestion + 1]
-  const nextQuestionIsMissing = nextQuestion !== undefined
-    && answers[nextQuestion.id] === undefined
-  const showMissingStatus = answeredCount < TOTAL_QUESTIONS
-    && allPreviousQuestionsAreAnswered
-    && (selectedAnswer === undefined || nextQuestionIsMissing)
   const titleId = `question-${question.id}-title`
   const style = {
     '--chakra-current': CHAKRA_THEME_COLORS[chakra.id as keyof typeof CHAKRA_THEME_COLORS],
@@ -155,10 +144,6 @@ export function QuestionPage({
         <span>Chapter {String(chakra.id).padStart(2, '0')} · {chakra.englishName}</span>
         <span>{chakra.description}</span>
       </div>
-
-      <p className="question-page__missing" hidden={!showMissingStatus} role="status">
-        {showMissingStatus ? `还有 ${TOTAL_QUESTIONS - answeredCount} 题未完成` : null}
-      </p>
 
       <section className="question-page__question">
         <p className="question-page__number">问题 {currentQuestion + 1}</p>

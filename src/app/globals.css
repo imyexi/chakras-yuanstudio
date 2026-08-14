@@ -315,6 +315,24 @@
   justify-content: flex-end;
 }
 
+.test-shell__exit {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+  justify-content: center;
+  padding: 0.5rem 0.875rem;
+  transition: background-color var(--motion-duration), border-color var(--motion-duration);
+}
+
+.test-shell__exit:hover {
+  background: var(--muted);
+  border-color: var(--muted-foreground);
+}
+
 .test-shell__main {
   padding: 2rem 1.5rem 3rem;
 }
@@ -627,11 +645,6 @@
 .question-page__chapter span:first-child {
   font-family: var(--font-latin);
   letter-spacing: 0.08em;
-}
-
-.question-page__missing {
-  color: var(--destructive);
-  margin: 1rem 0 0;
 }
 
 .question-page__question {

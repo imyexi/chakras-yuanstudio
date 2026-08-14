@@ -48,6 +48,38 @@ afterEach(() => {
 })
 
 describe('QuestionPage 语义与键盘操作', () => {
+  it('桌面暂存入口使用低强调的主题细边框样式', () => {
+    const stylesheet = postcss.parse(
+      readFileSync(resolve(process.cwd(), 'src/app/globals.css'), 'utf8')
+    )
+    const baseDeclarations: Record<string, string> = {}
+    const hoverDeclarations: Record<string, string> = {}
+
+    stylesheet.walkRules((rule) => {
+      const declarations = rule.selector === '.test-shell__exit'
+        ? baseDeclarations
+        : rule.selector === '.test-shell__exit:hover'
+          ? hoverDeclarations
+          : null
+
+      if (declarations) {
+        rule.walkDecls((declaration) => {
+          declarations[declaration.prop] = declaration.value
+        })
+      }
+    })
+
+    expect(baseDeclarations).toMatchObject({
+      background: 'transparent',
+      border: '1px solid var(--border)',
+      color: 'var(--foreground)',
+    })
+    expect(hoverDeclarations).toMatchObject({
+      background: 'var(--muted)',
+      'border-color': 'var(--muted-foreground)',
+    })
+  })
+
   it('所有移动宽度的底栏都让保存状态与操作分行，375×667 隐藏非关键英文', () => {
     const stylesheet = postcss.parse(
       readFileSync(resolve(process.cwd(), 'src/app/globals.css'), 'utf8')
@@ -121,34 +153,16 @@ describe('QuestionPage 语义与键盘操作', () => {
     expect(screen.getByRole('button', { name: '下一题' })).toBeEnabled()
   })
 
-  it('只在当前题是第一遗漏时显示剩余题数', () => {
-    const { rerender, props } = renderQuestionPage({ currentQuestion: 2, answers: { 1: 0, 2: 1 } })
+  it('任何答题状态都不显示剩余未完成题数', () => {
+    const { rerender, props } = renderQuestionPage()
 
-    expect(screen.getByRole('status')).toHaveTextContent('还有 54 题未完成')
+    expect(screen.queryByText(/还有 \d+ 题未完成/)).not.toBeInTheDocument()
+
+    rerender(<QuestionPage {...props} currentQuestion={2} answers={{ 1: 0, 2: 1 }} />)
+    expect(screen.queryByText(/还有 \d+ 题未完成/)).not.toBeInTheDocument()
 
     rerender(<QuestionPage {...props} currentQuestion={3} answers={{ 1: 0, 3: 1 }} />)
-
-    expect(screen.queryByText(/题未完成/)).not.toBeInTheDocument()
-  })
-
-  it('选答到自动前进期间复用剩余题数状态节点', () => {
-    const { rerender, props } = renderQuestionPage()
-    const status = screen.getByRole('status')
-
-    rerender(<QuestionPage {...props} answers={{ 1: 0 }} />)
-
-    expect(screen.getByRole('status')).toBe(status)
-    expect(status).toHaveTextContent('还有 55 题未完成')
-
-    rerender(<QuestionPage {...props} currentQuestion={1} answers={{ 1: 0 }} />)
-
-    expect(screen.getByRole('status')).toBe(status)
-  })
-
-  it('回看已答题且下一题也已答时隐藏剩余题数', () => {
-    renderQuestionPage({ answers: { 1: 0, 2: 1 } })
-
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByText(/还有 \d+ 题未完成/)).not.toBeInTheDocument()
   })
 
   it('切换题目时复用答题区节点，避免重复播放进场动画', () => {

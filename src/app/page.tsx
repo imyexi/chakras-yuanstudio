@@ -58,7 +58,7 @@ export default function Home() {
     return (
       <TestShell
         actions={(
-          <button className="hidden md:inline-flex" type="button" onClick={session.saveAndExit}>
+          <button className="test-shell__exit hidden md:inline-flex" type="button" onClick={session.saveAndExit}>
             {session.storageWarning ? '退出测试' : '暂存并退出'}
           </button>
         )}

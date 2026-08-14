@@ -208,7 +208,7 @@ describe('Home 状态装配', () => {
     fireEvent.click(screen.getByRole('button', { name: '下一题' }))
     const saveButtons = screen.getAllByRole('button', { name: '暂存并退出' })
     expect(saveButtons).toHaveLength(2)
-    expect(saveButtons[0]).toHaveClass('hidden', 'md:inline-flex')
+    expect(saveButtons[0]).toHaveClass('test-shell__exit', 'hidden', 'md:inline-flex')
     expect(saveButtons[1]).toHaveClass('md:hidden')
     saveButtons.forEach((button) => fireEvent.click(button))
 
@@ -228,7 +228,7 @@ describe('Home 状态装配', () => {
 
     const exitButtons = screen.getAllByRole('button', { name: '退出测试' })
     expect(exitButtons).toHaveLength(2)
-    expect(exitButtons[0]).toHaveClass('hidden', 'md:inline-flex')
+    expect(exitButtons[0]).toHaveClass('test-shell__exit', 'hidden', 'md:inline-flex')
     expect(exitButtons[1]).toHaveClass('md:hidden')
     expect(screen.queryByRole('button', { name: '暂存并退出' })).not.toBeInTheDocument()
 
