@@ -1,5 +1,7 @@
 // 脉轮测试数据
 
+import type { TestVersion } from '@/lib/test-version'
+
 export interface Question {
   id: number;
   text: string;
@@ -249,13 +251,19 @@ export function calculateChakraScore(
 }
 
 // 获取所有脉轮的分数
-export function calculateAllChakraScores(answers: Record<number, number>): Record<string, number> {
+export function calculateAllChakraScores(
+  answers: Record<number, number>,
+  version: TestVersion = 'v1',
+): Record<string, number> {
   const scores: Record<string, number> = {};
   chakras.forEach(chakra => {
     const rawScore = calculateChakraScore(answers, chakra.startQuestion, chakra.endQuestion);
     // 直接使用原始分数作为百分比（-100到100）
     const percentage = Math.round(rawScore);
-    scores[chakra.name] = Math.max(-100, Math.min(100, percentage));
+    const score = Math.max(-100, Math.min(100, percentage));
+    scores[chakra.name] = version === 'v2' && chakra.name === '海底轮'
+      ? Math.min(score + 20, 100)
+      : score;
   });
   return scores;
 }
