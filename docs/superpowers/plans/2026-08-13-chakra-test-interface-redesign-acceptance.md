@@ -6,11 +6,13 @@
 
 计划：`docs/superpowers/plans/2026-08-13-chakra-test-interface-redesign.md`
 
-最终规格修复提交：`cef90157fccaf39c4525e779879ca0bcf6a20f6c`
+最终规格修复基线：`cef90157fccaf39c4525e779879ca0bcf6a20f6c`
+
+最终生产代码提交：`e00ed993a7ebcb9ab3188fa0c08786c9281f0c71`
 
 ## 1. 验收结论
 
-本地实现、自动化检查、生产构建、四视口视觉检查和主要异常路径均已通过。上线结论必须在 `master` 推送后补充，生产页面、健康接口和核心流程均通过前不得把本记录标记为最终完成。
+本地实现、自动化检查、生产构建、四视口视觉检查、主要异常路径和真实生产回读均已通过。`yyry.studio` 的独立 Nginx VPS 已运行最终产品代码，生产页面、健康接口、核心资源以及桌面和移动端流程均完成验收，本记录状态为最终完成。
 
 本次改版保持 56 道题、计分、原型匹配和 API 请求体不变，完成浅深主题、欢迎/答题/结果三屏重构、正式人物图、可访问单选组、本地恢复、分享回退和数据库失败降级。最终复审又关闭欢迎页信息结构、平板/移动布局、深色主操作、七轮业务色、JSON `null` 结果清理和移动结果 Hero 顺序等规格偏差；其中每个行为修复均有先失败后通过的回归测试。
 
@@ -25,11 +27,11 @@
 
 ## 3. 自动化与构建
 
-执行时间：2026-08-14 03:15–03:20（Asia/Shanghai）。
+最终复跑时间：2026-08-14 04:18–04:19（Asia/Shanghai）。
 
 | 检查 | 结果 |
 | --- | --- |
-| `npm test` | 退出码 0；13 个测试文件，147/147 通过 |
+| `npm test` | 退出码 0；13 个测试文件，149/149 通过 |
 | `npm run lint` | 退出码 0；无 ESLint 错误 |
 | `npx tsc --noEmit --incremental false` | 退出码 0 |
 | `npm run build` | 退出码 0；Next.js 16.1.6 生产构建成功，standalone 资源同步完成 |
@@ -52,7 +54,7 @@ Vitest 输出含 Vite 对未来 `configLoader: native` 的兼容提醒，不是�
 | `/chakras/archetypes/female/heart-solar.png` | 200 |
 | `/chakras/archetypes/female/sacral-throat.png` | 200 |
 | `/chakras/archetypes/female/third-eye-root.png` | 200 |
-| `/chakras/api/health` | 本地 500；本机没有 `DATABASE_URL`，只记录为环境限制；生产必须为 200 且数据库已连接 |
+| `/chakras/api/health` | 本地 500；本机没有 `DATABASE_URL`，只记录为环境限制；生产已单独验证为 200 且数据库已连接 |
 
 standalone 根入口、`.next/static`、`public`、三份字体、二维码、Logo 和三张验收人物图均存在。最终浏览器日志与调试协议事件为空，没有非预期控制台错误。
 
@@ -64,6 +66,8 @@ standalone 根入口、`.next/static`、`public`、三份字体、二维码、Lo
 - 计时器与回改：上一题、下一题、立即退出均取消旧自动前进；返回可见旧答案，修改后覆盖本地答案。
 - 完整性：56/56 恢复到末题并可查看结果；55/56 提交被阻止，定位首个遗漏题，显示“还有 1 题未完成”，不生成结果。
 - 完整键盘流程：在 `1280×800` 新鲜生产构建中连续完成 56 题；每题以空格选中单选项，再用 Enter 触发“下一题”，末题用 Enter 触发“查看结果”。抽查第 1、2、55、56 题均为选中后操作可用；结果缓存包含 56 个答案、进度键已清理，并显示“你的脉轮人物原型报告”。
+- 最终生产回归：在提交 `e00ed99` 上再次以真实鼠标输入完成 56 题；末题提交前 `scrollY=294`，结果出现后为 `0`，报告主标题 `top=195`，人物图宽度有效，状态为“结果已在线备份”，控制台无警告或错误。
+- 滚动恢复：页面状态切换在绘制前归顶；`390×844` 生产结果页从底部 `scrollY=3160` 刷新后，连续 12 次、约 1.2 秒采样均保持 `scrollY=0`，没有再次恢复旧位置。移动端报告保持结论在前、人物图在后，两列摘要和隐藏顶部快捷操作均正确。
 - 故障降级：进度写入失败仍可在内存答题并显示丢失警告；`1280×800` 只显示桌面导航“退出测试”，`390×844` 只显示移动正文“退出测试”，均不再承诺暂存且没有横向溢出；结果写入失败仍立即显示结果、保留 56 道进度并提示；在线 API 被阻断时结果仍显示，本地结果已保存，状态变为在线备份未完成。
 - 结果动态性：Heart-Solar 显示“老好人/温柔领导者”；Sacral-Throat 显示“灵感喷泉/灵感表达者”；ThirdEye-Root 显示“现实雷达员/现实洞察者”。主导、辅助和最低轮随分数变化，不是硬编码示例。
 - 人物图：正式女性图的路径、替代文字和比例正确；桌面宽度 520px；外层无边框、阴影、渐变或内边距；模拟加载失败后保持同一尺寸并显示结果名和“人物原型图片暂时无法显示”。
@@ -94,14 +98,15 @@ standalone 根入口、`.next/static`、`public`、三份字体、二维码、Lo
 
 ## 7. 部署与生产回读
 
-GitHub Deployments 已证明生产发布由 Vercel GitHub App 承接：`vercel[bot]` 为当前生产 SHA `c36528e` 创建的 Production deployment 状态为 `success`，说明历史自动部署链路可证实。仓库内仍无 Actions workflow、SSH、PM2、systemd 或自有部署脚本；推送后必须等待新 SHA 对应的 Vercel deployment 成功，并以 `yyry.studio` 实际回读为最终依据。
+`yyry.studio` 与 Vercel 是两条并行发布链。权威 DNS 指向独立 Nginx VPS `8.147.62.5`，`/chakras` 代理到本机 `3000` 端口；因此 Vercel 的 Production deployment 不能代替目标域名验收。最终上线沿既有生产契约执行：远端仓库只允许已知的 `next-env.d.ts` 构建差异，随后 `git fetch`、`git merge --ff-only origin/master`、`npm run build`，构建成功后才执行 `pm2 restart chakras-yuanstudio --update-env`，未使用 `reset --hard`。
 
-推送后必须记录：
+最终生产证据：
 
-- 远端 `master` 的最终 SHA 与推送时间；
-- `https://yyry.studio/chakras` 的新版文案或静态资源指纹；
-- 页面、健康接口、字体、二维码、Logo 和三张人物图的 HTTP 状态；
-- 生产桌面与移动欢迎、作答、结果、分享/重测冒烟；
-- 控制台是否存在阻断错误。
+- 产品代码提交：`e00ed993a7ebcb9ab3188fa0c08786c9281f0c71`；本地 `HEAD`、`origin/master`、实时 GitHub `master` 和 VPS HEAD 在产品发布时一致；
+- VPS BUILD_ID：`pQdpV7dVSwxyh26rQn0Ej`；PM2 进程 `chakras-yuanstudio` 状态 `online`，PID `2849278`，重启计数 `9`，不稳定重启为 `0`；
+- `https://yyry.studio/chakras/api/health` 返回 200，正文为 `status=ok`、`database=connected`；
+- 页面、健康接口、三份字体、二维码、Logo 和三张验收人物图共 10 项全部返回 200，类型与字节数合理；
+- 桌面端完成 56 题、结果在线备份、分享反馈和重测；移动端完成结果首屏、刷新归顶、响应式顺序和无横向溢出检查；生产控制台没有阻断错误；
+- 本地验收服务已停止，端口 `3318` 已释放；工作区没有 tracked 或 staged 残留，既有未跟踪内容未清理、未暂存。
 
-若有限轮询后生产未更新，不猜测服务器命令；应明确报告缺少实际部署平台或服务器权限。只有生产页面与资源回读、健康检查 `ok` 和核心流程冒烟全部通过，目标才完成。
+验收记录的后续文档提交只更新证据，不改变上述产品代码，因此不要求再次构建或重启生产服务。
