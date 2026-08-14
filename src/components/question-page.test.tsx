@@ -131,6 +131,36 @@ describe('QuestionPage 语义与键盘操作', () => {
     expect(screen.queryByText(/题未完成/)).not.toBeInTheDocument()
   })
 
+  it('选答到自动前进期间复用剩余题数状态节点', () => {
+    const { rerender, props } = renderQuestionPage()
+    const status = screen.getByRole('status')
+
+    rerender(<QuestionPage {...props} answers={{ 1: 0 }} />)
+
+    expect(screen.getByRole('status')).toBe(status)
+    expect(status).toHaveTextContent('还有 55 题未完成')
+
+    rerender(<QuestionPage {...props} currentQuestion={1} answers={{ 1: 0 }} />)
+
+    expect(screen.getByRole('status')).toBe(status)
+  })
+
+  it('回看已答题且下一题也已答时隐藏剩余题数', () => {
+    renderQuestionPage({ answers: { 1: 0, 2: 1 } })
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('切换题目时复用答题区节点，避免重复播放进场动画', () => {
+    const { container, rerender, props } = renderQuestionPage({ answers: { 1: 0 } })
+    const questionSection = container.querySelector('.question-page__question')
+
+    rerender(<QuestionPage {...props} currentQuestion={1} answers={{ 1: 0 }} />)
+
+    expect(container.querySelector('.question-page__question')).toBe(questionSection)
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(questions[1].text)
+  })
+
   it('保存不可用时显示原警告、退出文案和丢失提醒', () => {
     renderQuestionPage({ storageWarning: '当前设备无法保存进度' })
 
@@ -175,12 +205,77 @@ describe('QuestionPage 语义与键盘操作', () => {
     expect(callbacks.onGoToQuestion).not.toHaveBeenCalled()
   })
 
-  it('切换题目后聚焦题干，并用独立 live region 播报题号', () => {
+  it('切换题目后可直接用方向键选择答案', async () => {
+    const user = userEvent.setup()
+    const { callbacks, rerender, props } = renderQuestionPage()
+
+    rerender(<QuestionPage {...props} currentQuestion={1} />)
+    await flushRadixFocus()
+
+    expect(screen.getByRole('radio', { name: optionLabels[0] })).toHaveFocus()
+
+    await user.keyboard('{ArrowRight>}')
+    await flushRadixFocus()
+    await user.keyboard('{/ArrowRight}')
+
+    expect(screen.getByRole('radio', { name: optionLabels[1] })).toHaveFocus()
+    expect(callbacks.onSelectAnswer).toHaveBeenCalledWith(2, 1)
+  })
+
+  it('返回已答题时聚焦已选答案', async () => {
+    const { rerender, props } = renderQuestionPage()
+
+    rerender(<QuestionPage {...props} currentQuestion={1} answers={{ 2: 3 }} />)
+    await flushRadixFocus()
+
+    expect(screen.getByRole('radio', { name: optionLabels[3] })).toHaveFocus()
+  })
+
+  it('答案单选组用题干作为可访问名称', () => {
+    renderQuestionPage()
+
+    expect(screen.getByRole('radiogroup', { name: questions[0].text })).toBeInTheDocument()
+  })
+
+  it('已答题在答案选项上按 Enter 进入下一题', async () => {
+    const user = userEvent.setup()
+    const { callbacks } = renderQuestionPage({ answers: { 1: 2 } })
+
+    expect(screen.getByRole('radio', { name: optionLabels[2] })).toHaveFocus()
+
+    await user.keyboard('{Enter}')
+
+    expect(callbacks.onGoToQuestion).toHaveBeenCalledOnce()
+    expect(callbacks.onGoToQuestion).toHaveBeenCalledWith(1)
+    expect(callbacks.onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('未答题在答案选项上按 Enter 不会前进', async () => {
+    const user = userEvent.setup()
+    const { callbacks } = renderQuestionPage()
+
+    await user.keyboard('{Enter}')
+
+    expect(callbacks.onGoToQuestion).not.toHaveBeenCalled()
+    expect(callbacks.onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('末题已答时在答案选项上按 Enter 查看结果', async () => {
+    const user = userEvent.setup()
+    const { callbacks } = renderQuestionPage({ currentQuestion: 55, answers: { 56: 4 } })
+
+    await user.keyboard('{Enter}')
+
+    expect(callbacks.onSubmit).toHaveBeenCalledOnce()
+    expect(callbacks.onGoToQuestion).not.toHaveBeenCalled()
+  })
+
+  it('切换题目后聚焦首个选项，并用独立 live region 播报题号', () => {
     const { rerender, props } = renderQuestionPage()
 
     rerender(<QuestionPage {...props} currentQuestion={1} />)
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
+    expect(screen.getByRole('radio', { name: optionLabels[0] })).toHaveFocus()
     expect(screen.getByText('第 2 题，共 56 题')).toHaveAttribute('aria-live', 'polite')
   })
 
@@ -196,6 +291,22 @@ describe('QuestionPage 语义与键盘操作', () => {
 })
 
 describe('QuestionPage pointer 自动前进与取消', () => {
+  it('pointer 自动前进等待期间按 Enter 只前进一次', () => {
+    vi.useFakeTimers()
+    const { callbacks } = renderQuestionPage({ answers: { 1: 0 } })
+    const firstOption = screen.getByRole('radio', { name: optionLabels[0] })
+
+    fireEvent.pointerUp(firstOption.closest('label')!, { pointerType: 'mouse' })
+    fireEvent.keyDown(firstOption, { key: 'Enter', code: 'Enter' })
+
+    expect(callbacks.onGoToQuestion).toHaveBeenCalledOnce()
+    expect(callbacks.onGoToQuestion).toHaveBeenCalledWith(1)
+
+    act(() => vi.advanceTimersByTime(250))
+
+    expect(callbacks.onGoToQuestion).toHaveBeenCalledOnce()
+  })
+
   it('直接命中 RadioGroupItem 时同步保存，249ms 不前进，250ms 前进一题', () => {
     vi.useFakeTimers()
     const { callbacks } = renderQuestionPage()
@@ -330,7 +441,7 @@ describe('QuestionPage pointer 自动前进与取消', () => {
     expect(callbacks.onGoToQuestion).not.toHaveBeenCalled()
   })
 
-  it('rerender 到新题会取消旧题的自动前进并聚焦新题', () => {
+  it('rerender 到新题会取消旧题的自动前进并聚焦首个选项', () => {
     vi.useFakeTimers()
     const { callbacks, rerender, props } = renderQuestionPage()
 
@@ -342,7 +453,7 @@ describe('QuestionPage pointer 自动前进与取消', () => {
     act(() => vi.advanceTimersByTime(250))
 
     expect(callbacks.onGoToQuestion).not.toHaveBeenCalled()
-    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
+    expect(screen.getByRole('radio', { name: optionLabels[0] })).toHaveFocus()
   })
 
   it('unmount 后推进时间不会调用自动前进', () => {

@@ -45,7 +45,7 @@ export function QuestionPage({
   const selectedAnswer = answers[question.id]
   const answeredCount = Object.keys(answers).length
   const percentage = Math.round(((currentQuestion + 1) / TOTAL_QUESTIONS) * 100)
-  const titleRef = React.useRef<HTMLHeadingElement>(null)
+  const answerGroupRef = React.useRef<HTMLDivElement>(null)
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const pointerValueRef = React.useRef<string | null>(null)
 
@@ -59,10 +59,19 @@ export function QuestionPage({
   React.useEffect(() => {
     clearAutoAdvance()
     pointerValueRef.current = null
-    titleRef.current?.focus()
 
     return clearAutoAdvance
   }, [clearAutoAdvance, currentQuestion])
+
+  React.useLayoutEffect(() => {
+    const selectedOption = answerGroupRef.current?.querySelector<HTMLButtonElement>(
+      '[role="radio"][aria-checked="true"]'
+    )
+    const firstOption = answerGroupRef.current?.querySelector<HTMLButtonElement>('[role="radio"]')
+    const focusTarget = selectedOption ?? firstOption
+
+    focusTarget?.focus()
+  }, [currentQuestion])
 
   const handleValueChange = (value: string) => {
     if (pointerValueRef.current === value) {
@@ -104,12 +113,17 @@ export function QuestionPage({
     onSubmit()
   }
 
-  const currentIsFirstMissing = answeredCount < TOTAL_QUESTIONS
-    && selectedAnswer === undefined
-    && Array.from(
-      { length: currentQuestion },
-      (_, index) => answers[index + 1] !== undefined
-    ).every(Boolean)
+  const allPreviousQuestionsAreAnswered = Array.from(
+    { length: currentQuestion },
+    (_, index) => answers[index + 1] !== undefined
+  ).every(Boolean)
+  const nextQuestion = questions[currentQuestion + 1]
+  const nextQuestionIsMissing = nextQuestion !== undefined
+    && answers[nextQuestion.id] === undefined
+  const showMissingStatus = answeredCount < TOTAL_QUESTIONS
+    && allPreviousQuestionsAreAnswered
+    && (selectedAnswer === undefined || nextQuestionIsMissing)
+  const titleId = `question-${question.id}-title`
   const style = {
     '--chakra-current': CHAKRA_THEME_COLORS[chakra.id as keyof typeof CHAKRA_THEME_COLORS],
   } as React.CSSProperties
@@ -142,24 +156,34 @@ export function QuestionPage({
         <span>{chakra.description}</span>
       </div>
 
-      {currentIsFirstMissing && (
-        <p className="question-page__missing" role="status">
-          还有 {TOTAL_QUESTIONS - answeredCount} 题未完成
-        </p>
-      )}
+      <p className="question-page__missing" hidden={!showMissingStatus} role="status">
+        {showMissingStatus ? `还有 ${TOTAL_QUESTIONS - answeredCount} 题未完成` : null}
+      </p>
 
-      <section className="question-page__question" key={question.id}>
+      <section className="question-page__question">
         <p className="question-page__number">问题 {currentQuestion + 1}</p>
-        <h1 ref={titleRef} className="question-page__title" tabIndex={-1}>
+        <h1 className="question-page__title" id={titleId}>
           {question.text}
         </h1>
 
         <RadioGroup
+          ref={answerGroupRef}
           className="question-page__answers"
-          aria-label={`问题 ${currentQuestion + 1} 的答案`}
+          aria-labelledby={titleId}
           value={selectedAnswer === undefined ? null : String(selectedAnswer)}
-          onKeyDown={() => {
+          onKeyDown={(event) => {
             pointerValueRef.current = null
+
+            if (event.key !== 'Enter' || selectedAnswer === undefined) return
+
+            event.preventDefault()
+
+            if (currentQuestion === TOTAL_QUESTIONS - 1) {
+              submit()
+              return
+            }
+
+            goToQuestion(currentQuestion + 1)
           }}
           onValueChange={handleValueChange}
         >
@@ -194,7 +218,7 @@ export function QuestionPage({
       </section>
 
       <p className="question-page__keyboard-hint">
-        键盘可用方向键或空格选择，再按下一题继续
+        键盘可用方向键或空格选择，按 Enter 进入下一题
       </p>
       <span className="sr-only" aria-live="polite">
         第 {currentQuestion + 1} 题，共 56 题
