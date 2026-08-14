@@ -79,9 +79,10 @@ export default function Home() {
 
   return (
     <TestShell middleLabel="脉轮人物原型报告">
-      {session.result ? (
+      {session.result && session.version ? (
         <ResultPage
           result={session.result}
+          version={session.version}
           backupStatus={session.backupStatus}
           storageWarning={session.storageWarning}
           onRestart={session.restart}

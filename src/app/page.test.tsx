@@ -269,6 +269,36 @@ describe('Home 状态装配', () => {
     expect(callbacks.restart).toHaveBeenCalledOnce()
   })
 
+  it('result 将 V2 会话版本传给分享文案', async () => {
+    const user = userEvent.setup()
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+
+    try {
+      const { session } = createSession({
+        version: 'v2',
+        pageState: 'result',
+        result: STORED_RESULT,
+      })
+      renderHome(session)
+
+      await user.click(screen.getByRole('button', { name: '复制分享摘要' }))
+
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('https://yyry.studio/chakra'))
+      expect(writeText).not.toHaveBeenCalledWith(expect.stringContaining('https://yyry.studio/chakras'))
+    } finally {
+      if (clipboardDescriptor) {
+        Object.defineProperty(navigator, 'clipboard', clipboardDescriptor)
+      } else {
+        Reflect.deleteProperty(navigator, 'clipboard')
+      }
+    }
+  })
+
   it('result 缺少数据时显示可恢复错误，不抛错或伪造结果', () => {
     const { callbacks, session } = createSession({ pageState: 'result', result: null })
 

@@ -72,6 +72,7 @@ function makeResult(scores: Record<string, number>): StoredResult {
 function renderHeartSolar(overrides: Partial<React.ComponentProps<typeof ResultPage>> = {}) {
   const props: React.ComponentProps<typeof ResultPage> = {
     result: makeResult(FIXTURES[0].scores),
+    version: 'v1',
     backupStatus: 'idle',
     storageWarning: null,
     onRestart: vi.fn(),
@@ -131,6 +132,7 @@ describe('ResultPage 动态原型', () => {
       <ThemeProvider>
         <TestShell>
           <ResultPage
+            version="v1"
             result={makeResult(FIXTURES[0].scores)}
             backupStatus="idle"
             storageWarning={null}
@@ -147,6 +149,7 @@ describe('ResultPage 动态原型', () => {
   it.each(FIXTURES)('$name 使用真实分数切换展示文案、人物与四项摘要', (fixture) => {
     render(
       <ResultPage
+        version="v1"
         result={makeResult(fixture.scores)}
         backupStatus="idle"
         storageWarning={null}
@@ -399,6 +402,20 @@ https://yyry.studio/chakras`
     fireEvent.click(screen.getByRole('button', { name: '复制分享摘要' }))
     unmount()
     act(() => vi.runOnlyPendingTimers())
+  })
+
+  it('V2 分享文本使用 /chakra 入口', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    setClipboard(writeText)
+    renderHeartSolar({ version: 'v2' })
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '复制分享摘要' }))
+      await Promise.resolve()
+    })
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('https://yyry.studio/chakra'))
+    expect(writeText).not.toHaveBeenCalledWith(expect.stringContaining('https://yyry.studio/chakras'))
   })
 
   it('Clipboard API 不存在时用只读临时 textarea 和 execCommand 成功回退', async () => {

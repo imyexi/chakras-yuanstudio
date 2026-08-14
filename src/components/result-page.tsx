@@ -12,6 +12,7 @@ import {
 } from '@/lib/chakra-archetypes'
 import type { BackupStatus } from '@/hooks/use-test-session'
 import type { StoredResult } from '@/lib/test-session'
+import { getTestShareUrl, type TestVersion } from '@/lib/test-version'
 
 export const RESULT_SHARE_ACTIONS_ID = 'result-share-actions'
 
@@ -45,8 +46,13 @@ function formatSignedScore(score: number) {
   return `${rounded > 0 ? '+' : ''}${rounded}%`
 }
 
-function buildShareText(displayName: string, headline: string, people: string) {
-  return `我的脉轮人物原型：${displayName}\n\n${headline}\n\n代表人物参考：${people || '当前原型暂无人物参考'}\n\nhttps://yyry.studio/chakras`
+function buildShareText(
+  displayName: string,
+  headline: string,
+  people: string,
+  shareUrl: string,
+) {
+  return `我的脉轮人物原型：${displayName}\n\n${headline}\n\n代表人物参考：${people || '当前原型暂无人物参考'}\n\n${shareUrl}`
 }
 
 function legacyCopy(text: string) {
@@ -69,11 +75,13 @@ function legacyCopy(text: string) {
 
 export function ResultPage({
   result,
+  version,
   backupStatus,
   storageWarning,
   onRestart,
 }: {
   result: StoredResult
+  version: TestVersion
   backupStatus: BackupStatus
   storageWarning: string | null
   onRestart(): void
@@ -88,7 +96,12 @@ export function ResultPage({
   const displayName = selectedCopy?.displayName ?? archetypeResult.archetype.name
   const displayHeadline = selectedCopy?.headline ?? archetypeResult.archetype.headline
   const people = archetypeResult.archetype.celebrities.slice(0, 3)
-  const shareText = buildShareText(displayName, displayHeadline, formatArchetypePeople(people))
+  const shareText = buildShareText(
+    displayName,
+    displayHeadline,
+    formatArchetypePeople(people),
+    getTestShareUrl(version),
+  )
   const backupCopy = BACKUP_COPY[backupStatus]
   const rawAverage = Math.round(
     chakras.reduce((sum, chakra) => sum + (result.scores[chakra.name] ?? 0), 0) / chakras.length
