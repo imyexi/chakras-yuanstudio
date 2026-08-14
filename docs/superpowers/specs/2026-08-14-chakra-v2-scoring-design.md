@@ -1,7 +1,7 @@
 # 脉轮测试 V2 双入口与计分设计
 
 - 日期：2026-08-14
-- 状态：待书面复核
+- 状态：已确认
 - 适用仓库：`chakras-yuanstudio`
 
 ## 1. 背景
@@ -68,7 +68,7 @@ V2 海底轮分数 = min(V1 海底轮分数 + 20, 100)
 | 80 | 100 |
 | 100 | 100 |
 
-计分函数使用明确的版本参数，并以 V1 为默认值。未传版本的现有调用和测试必须保持原行为。
+计分函数接收可选版本参数，省略时默认 V1。未传版本的现有调用和测试必须保持原行为。
 
 ## 5. 架构设计
 
@@ -194,10 +194,11 @@ V2 HTML 继续引用 `/chakras/_next/*` 和 `/chakras/*` 公共资源，这是�
 ```text
 npm test
 npm run lint
+npx tsc --noEmit
 npm run build
 ```
 
-构建配置当前允许忽略 TypeScript 构建错误，因此必须同时依赖测试和 ESLint，不能只以构建成功作为正确性证据。
+构建配置当前允许忽略 TypeScript 构建错误，因此必须单独运行 TypeScript 检查，不能只以构建成功作为正确性证据。
 
 ### 8.5 路由验收
 
@@ -212,6 +213,8 @@ npm run build
 - `/chakras` 的相同流程与原计分保持不变；
 - 桌面端和移动端布局与 V1 一致。
 
+本地或线上人工验收不得直接向真实的 `POST /chakras/api/test-results` 写入测试记录。默认使用临时代理或浏览器 mock 拦截该请求；只有获得单独、明确的数据库集成验收授权后，才允许创建可识别且可清理的测试记录。
+
 ## 9. 预计代码范围
 
 只修改与版本识别、计分、存储和分享直接相关的文件：
@@ -219,10 +222,11 @@ npm run build
 - `src/lib/chakra-data.ts` 及其测试；
 - `src/lib/test-session.ts` 及其测试；
 - `src/hooks/use-test-session.ts` 及其测试；
+- `src/app/page.tsx` 及其测试；
 - `src/components/result-page.tsx` 及其测试；
 - 新增 `src/lib/test-version.ts` 及其测试。
 
-不修改 Prisma schema、题库、页面视觉组件、全局样式或现有静态资源。
+不修改 Prisma schema、题库、页面视觉结构与样式、全局样式或现有静态资源。
 
 ## 10. 成功标准
 
@@ -231,7 +235,7 @@ npm run build
 3. V1/V2 的答题进度、结果与重测清理完全隔离。
 4. 两个版本共用现有 API 和数据库表。
 5. 前端结构与视觉相同，没有复制页面代码。
-6. 自动化测试、ESLint 和生产构建通过。
+6. 自动化测试、ESLint、TypeScript 检查和生产构建通过。
 7. Nginx 生效后，两条线上地址均可刷新访问且资源请求正常。
 
 ## 11. 回滚
