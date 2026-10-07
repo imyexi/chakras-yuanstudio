@@ -1,6 +1,7 @@
 'use client'
 
 import type { ProgressInfo } from '@/hooks/use-test-session'
+import { ChakraEnergyColumn } from './chakra-energy-column'
 import { TestShell } from './test-shell'
 
 type WelcomePageProps = {
@@ -15,36 +16,6 @@ function PrimaryAction({ children, onClick }: { children: React.ReactNode; onCli
     <button type="button" className="welcome-page__primary-action" data-variant="primary" onClick={onClick}>
       {children}
     </button>
-  )
-}
-
-function ChakraOrbit() {
-  return (
-    <svg
-      className="chakra-orbit"
-      viewBox="0 0 100 100"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <circle className="chakra-orbit__ring chakra-orbit__ring--outer" cx="50" cy="50" r="47" />
-      <circle className="chakra-orbit__ring chakra-orbit__ring--middle" cx="50" cy="50" r="28" />
-      <circle className="chakra-orbit__ring chakra-orbit__ring--inner" cx="50" cy="50" r="11" />
-      <circle className="chakra-orbit__node chakra-orbit__node--root" cx="50" cy="97" r="1.75" />
-      <circle className="chakra-orbit__node chakra-orbit__node--sacral" cx="16.766" cy="83.234" r="1.75" />
-      <circle className="chakra-orbit__node chakra-orbit__node--solar" cx="3" cy="50" r="1.75" />
-      <circle className="chakra-orbit__node chakra-orbit__node--heart" cx="16.766" cy="16.766" r="1.75" />
-      <circle className="chakra-orbit__node chakra-orbit__node--throat" cx="50" cy="3" r="1.75" />
-      <circle className="chakra-orbit__node chakra-orbit__node--third-eye" cx="83.234" cy="16.766" r="1.75" />
-      <circle className="chakra-orbit__node chakra-orbit__node--crown" cx="97" cy="50" r="1.75" />
-      <rect
-        className="chakra-orbit__center"
-        x="46"
-        y="46"
-        width="8"
-        height="8"
-        transform="rotate(45 50 50)"
-      />
-    </svg>
   )
 }
 
@@ -89,7 +60,7 @@ export function WelcomePage({ progressInfo, onStart, onContinue, onRestart }: We
             </details>
           </div>
           <div className="welcome-page__visual welcome-page__reveal">
-            <ChakraOrbit />
+            <ChakraEnergyColumn />
           </div>
         </div>
         {!isNewUser && (

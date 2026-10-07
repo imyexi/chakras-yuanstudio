@@ -471,37 +471,173 @@
   place-items: center;
 }
 
-.chakra-orbit {
-  aspect-ratio: 1;
+.chakra-column {
+  --cycle: 7s;
+  aspect-ratio: 240 / 280;
   display: block;
   height: auto;
   overflow: visible;
-  width: min(100%, 23rem);
+  width: min(100%, 24rem);
 }
 
-.chakra-orbit__ring {
-  fill: none;
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
+.chakra-column__stop--root { stop-color: var(--chakra-root); }
+.chakra-column__stop--sacral { stop-color: var(--chakra-sacral); }
+.chakra-column__stop--solar { stop-color: var(--chakra-solar); }
+.chakra-column__stop--heart { stop-color: var(--chakra-heart); }
+.chakra-column__stop--throat { stop-color: var(--chakra-throat); }
+.chakra-column__stop--third-eye { stop-color: var(--chakra-third-eye); }
+.chakra-column__stop--crown { stop-color: var(--chakra-crown); }
+
+.chakra-column__halo-stop { stop-color: var(--brand-champagne-gold); }
+
+.chakra-column__halo {
+  animation: chakra-column-breathe 8s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
-.chakra-orbit__ring--outer { stroke: var(--chakra-root); }
-.chakra-orbit__ring--middle { stroke: var(--chakra-heart); }
-.chakra-orbit__ring--inner { stroke: var(--chakra-crown); }
-
-.chakra-orbit__node--root { fill: var(--chakra-root); }
-.chakra-orbit__node--sacral { fill: var(--chakra-sacral); }
-.chakra-orbit__node--solar { fill: var(--chakra-solar); }
-.chakra-orbit__node--heart { fill: var(--chakra-heart); }
-.chakra-orbit__node--throat { fill: var(--chakra-throat); }
-.chakra-orbit__node--third-eye { fill: var(--chakra-third-eye); }
-.chakra-orbit__node--crown { fill: var(--chakra-crown); }
-
-.chakra-orbit__center {
+.chakra-column__mandala {
   fill: none;
   stroke: var(--brand-champagne-gold);
+  stroke-width: 0.6;
+  transform-box: view-box;
+  transform-origin: 120px 140px;
+}
+
+.chakra-column__mandala--outer {
+  animation: chakra-column-spin 90s linear infinite;
+  opacity: 0.22;
+}
+
+.chakra-column__mandala--inner {
+  animation: chakra-column-spin 60s linear infinite reverse;
+  opacity: 0.2;
+}
+
+.chakra-column__mandala-ring--dashed {
+  stroke-dasharray: 1.5 4;
+}
+
+.chakra-column__axis {
+  animation: chakra-column-draw 1.4s ease-out 200ms both;
+  stroke-dasharray: 1;
+  stroke-linecap: round;
+  stroke-width: 1.4;
+}
+
+.chakra-column__channel-line,
+.chakra-column__channel-flow {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.chakra-column__channel-line {
+  animation: chakra-column-draw 1.8s ease-out 400ms both;
+  opacity: 0.55;
+  stroke-dasharray: 1;
+  stroke-width: 0.9;
+}
+
+.chakra-column__channel-flow {
+  animation: chakra-column-flow 4s linear infinite;
+  stroke-dasharray: 0.004 0.096;
+  stroke-width: 2.6;
+}
+
+.chakra-column__channel--pingala .chakra-column__channel-flow {
+  animation-delay: -2s;
+}
+
+.chakra-column__node--root { color: var(--chakra-root); }
+.chakra-column__node--sacral { color: var(--chakra-sacral); }
+.chakra-column__node--solar { color: var(--chakra-solar); }
+.chakra-column__node--heart { color: var(--chakra-heart); }
+.chakra-column__node--throat { color: var(--chakra-throat); }
+.chakra-column__node--third-eye { color: var(--chakra-third-eye); }
+.chakra-column__node--crown { color: var(--chakra-crown); }
+
+.chakra-column__node {
+  animation: chakra-column-node-in 500ms ease-out both;
+  animation-delay: calc(600ms + var(--i) * 120ms);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.chakra-column__node-core {
+  animation: chakra-column-glow var(--cycle) ease-out infinite;
+  animation-delay: calc(var(--i) * 1s);
+  fill: currentColor;
+}
+
+.chakra-column__node-ring {
+  fill: var(--background);
+  stroke: currentColor;
   stroke-width: 1;
-  vector-effect: non-scaling-stroke;
+}
+
+.chakra-column__node-pulse {
+  animation: chakra-column-pulse var(--cycle) ease-out infinite;
+  animation-delay: calc(var(--i) * 1s);
+  fill: none;
+  opacity: 0;
+  stroke: currentColor;
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.chakra-column__spark {
+  animation: chakra-column-rise var(--cycle) linear infinite;
+  fill: var(--brand-champagne-gold);
+  filter: drop-shadow(0 0 3px var(--brand-champagne-gold));
+  opacity: 0;
+}
+
+.dark .chakra-column__spark {
+  fill: var(--brand-paper);
+}
+
+@keyframes chakra-column-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes chakra-column-breathe {
+  0%, 100% { opacity: 0.6; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+@keyframes chakra-column-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes chakra-column-flow {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -1; }
+}
+
+@keyframes chakra-column-node-in {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes chakra-column-glow {
+  0%, 14%, 100% { filter: none; }
+  3% { filter: drop-shadow(0 0 4px currentColor); }
+}
+
+@keyframes chakra-column-pulse {
+  0% { opacity: 0.85; transform: scale(1); }
+  16% { opacity: 0; transform: scale(2.2); }
+  100% { opacity: 0; transform: scale(2.2); }
+}
+
+/* Spark reaches node i at i seconds, matching the node delays above. */
+@keyframes chakra-column-rise {
+  0% { opacity: 0; transform: translateY(0); }
+  4% { opacity: 1; }
+  85.714% { opacity: 1; transform: translateY(-220px); }
+  95%, 100% { opacity: 0; transform: translateY(-220px); }
 }
 
 .welcome-page__reveal {
@@ -566,14 +702,20 @@
     width: 100%;
   }
 
-  .chakra-orbit {
-    width: min(100%, 16rem);
+  .chakra-column {
+    width: min(100%, 15rem);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .welcome-page__reveal {
+  .welcome-page__reveal,
+  .chakra-column * {
     animation: none;
+  }
+
+  .chakra-column__spark,
+  .chakra-column__channel-flow {
+    display: none;
   }
 }
 

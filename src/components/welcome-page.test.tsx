@@ -167,67 +167,68 @@ describe('WelcomePage', () => {
     expect(screen.getByText('圆圆如意')).toBeInTheDocument()
     expect(screen.getByText('Chakra Archetype Test')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '切换到深色模式' })).toBeInTheDocument()
-    const orbit = document.querySelector('.chakra-orbit')
-    expect(orbit).toHaveAttribute('aria-hidden', 'true')
-    expect(orbit?.querySelectorAll('.chakra-orbit__ring')).toHaveLength(3)
-    expect(orbit?.querySelectorAll('.chakra-orbit__node')).toHaveLength(7)
-    expect(orbit?.querySelectorAll('.chakra-orbit__center')).toHaveLength(1)
-    expect(orbit).toHaveTextContent('')
+    const column = document.querySelector('.chakra-column')
+    expect(column).toHaveAttribute('aria-hidden', 'true')
+    expect(column?.querySelectorAll('.chakra-column__node')).toHaveLength(7)
+    expect(column?.querySelectorAll('.chakra-column__channel')).toHaveLength(2)
+    expect(column?.querySelectorAll('.chakra-column__spark')).toHaveLength(1)
+    expect(column).toHaveTextContent('')
   })
 
-  it('七个能量点沿 270 度顺序落在同一外环上且不会被裁切', () => {
+  it('七个脉轮自海底轮到顶轮沿中轴自下而上排列且不会被裁切', () => {
     const callbacks = createCallbacks()
-    const expectedAngles = new Map([
-      ['chakra-orbit__node--root', 90],
-      ['chakra-orbit__node--sacral', 135],
-      ['chakra-orbit__node--solar', 180],
-      ['chakra-orbit__node--heart', 225],
-      ['chakra-orbit__node--throat', 270],
-      ['chakra-orbit__node--third-eye', 315],
-      ['chakra-orbit__node--crown', 0],
-    ])
+    const order = ['root', 'sacral', 'solar', 'heart', 'throat', 'third-eye', 'crown']
 
     renderWelcomePage({
       progressInfo: { answered: 0, total: 56, percentage: 0, completed: false },
       ...callbacks,
     })
 
-    const outerRing = document.querySelector('.chakra-orbit__ring--outer')
-    const nodes = Array.from(document.querySelectorAll('.chakra-orbit__node'))
-    const centerX = Number(outerRing?.getAttribute('cx'))
-    const centerY = Number(outerRing?.getAttribute('cy'))
-    const radius = Number(outerRing?.getAttribute('r'))
-    const viewBox = outerRing?.closest('svg')?.getAttribute('viewBox')?.split(' ').map(Number)
-
-    expect(radius).toBeGreaterThan(0)
-    expect(viewBox).toHaveLength(4)
-    expect(nodes).toHaveLength(7)
-    expect(new Set(nodes.map((node) => `${node.getAttribute('cx')},${node.getAttribute('cy')}`))).toHaveProperty(
-      'size',
-      7
+    const svg = document.querySelector('.chakra-column')
+    const axis = svg?.querySelector('.chakra-column__axis')
+    const viewBox = svg?.getAttribute('viewBox')?.split(' ').map(Number)
+    const cores = order.map((name) =>
+      svg?.querySelector(`.chakra-column__node--${name} .chakra-column__node-core`)
     )
-    nodes.forEach((node) => {
-      const nodeX = Number(node.getAttribute('cx'))
-      const nodeY = Number(node.getAttribute('cy'))
-      const nodeRadius = Number(node.getAttribute('r'))
-      const distance = Math.hypot(nodeX - centerX, nodeY - centerY)
-      const angle = (Math.atan2(nodeY - centerY, nodeX - centerX) * 180) / Math.PI
-      const normalizedAngle = (angle + 360) % 360
-      const chakraClass = Array.from(node.classList).find((name) =>
-        name.startsWith('chakra-orbit__node--')
-      )
-      const expectedAngle = expectedAngles.get(chakraClass ?? '')
 
-      if (!viewBox || expectedAngle === undefined) throw new Error('能量点缺少有效的几何定义')
-      const [viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight] = viewBox
+    if (!viewBox || viewBox.length !== 4 || !axis) throw new Error('脉轮图缺少有效的几何定义')
+    const [viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight] = viewBox
+    const axisX = Number(axis.getAttribute('x1'))
+    const ys = cores.map((core) => Number(core?.getAttribute('cy')))
 
-      expect(distance).toBeCloseTo(radius, 4)
-      expect(normalizedAngle).toBeCloseTo(expectedAngle, 4)
-      expect(nodeX - nodeRadius).toBeGreaterThanOrEqual(viewBoxX)
-      expect(nodeY - nodeRadius).toBeGreaterThanOrEqual(viewBoxY)
-      expect(nodeX + nodeRadius).toBeLessThanOrEqual(viewBoxX + viewBoxWidth)
-      expect(nodeY + nodeRadius).toBeLessThanOrEqual(viewBoxY + viewBoxHeight)
+    cores.forEach((core) => {
+      expect(core?.tagName).toBe('circle')
+      expect(Number(core?.getAttribute('cx'))).toBe(axisX)
     })
+    ys.slice(1).forEach((y, i) => expect(y).toBeLessThan(ys[i]))
+
+    svg?.querySelectorAll('.chakra-column__node circle').forEach((circle) => {
+      const cx = Number(circle.getAttribute('cx'))
+      const cy = Number(circle.getAttribute('cy'))
+      const r = Number(circle.getAttribute('r'))
+      expect(cx - r).toBeGreaterThanOrEqual(viewBoxX)
+      expect(cy - r).toBeGreaterThanOrEqual(viewBoxY)
+      expect(cx + r).toBeLessThanOrEqual(viewBoxX + viewBoxWidth)
+      expect(cy + r).toBeLessThanOrEqual(viewBoxY + viewBoxHeight)
+    })
+  })
+
+  it('减少动态效果偏好下停用脉轮动画', () => {
+    const stylesheet = postcss.parse(
+      readFileSync(resolve(process.cwd(), 'src/app/globals.css'), 'utf8')
+    )
+    const reducedSelectors: string[] = []
+
+    stylesheet.walkAtRules('media', (atRule) => {
+      if (!atRule.params.includes('prefers-reduced-motion')) return
+      atRule.walkRules((rule) => {
+        rule.walkDecls('animation', (decl) => {
+          if (decl.value === 'none') reducedSelectors.push(...rule.selectors)
+        })
+      })
+    })
+
+    expect(reducedSelectors).toContain('.chakra-column *')
   })
 
   it('欢迎页主操作具有约 160x56 的醒目点击尺寸', () => {
